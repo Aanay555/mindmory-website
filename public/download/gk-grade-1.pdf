@@ -1,0 +1,7 @@
+<a 
+  href="/downloads/Sample_Paper_Grade_1.pdf" 
+  download="Mindmory_Grade_1_Sample_Paper.pdf"
+  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2"
+>
+  Download PDF
+</a>

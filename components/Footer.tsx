@@ -1,7 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { siteContent } from "@/data/content";
 import { 
   Send, 
   CheckCircle2, 
@@ -9,18 +8,45 @@ import {
   Phone, 
   MapPin, 
   ArrowRight,
-  Share2
+  Lock,
+  Loader2
 } from "lucide-react";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [liveWhatsapp, setLiveWhatsapp] = useState("923097864722");
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.whatsapp) setLiveWhatsapp(data.whatsapp);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setSubscribed(true);
-    setEmail("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (res.ok) {
+        setSubscribed(true);
+        setEmail("");
+      }
+    } catch {
+      // Fallback
+      setSubscribed(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const socialLinks = [
@@ -32,7 +58,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-black text-neutral-300 font-sans border-t border-neutral-900">
-      {/* 1. NEWSLETTER / EMAIL SUBSCRIBER BANNER */}
+      {/* 1. DYNAMIC SUBSCRIBER BANNER */}
       <div className="bg-gradient-to-r from-neutral-950 via-red-950/60 to-neutral-950 border-b border-red-900/50 py-12 px-4">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-8">
           <div className="max-w-xl text-center lg:text-left space-y-2">
@@ -50,8 +76,8 @@ export default function Footer() {
           <div className="w-full lg:w-auto">
             {subscribed ? (
               <div className="flex items-center gap-2 bg-red-950/80 border border-red-600 px-6 py-3 rounded-xl text-xs text-white">
-                <CheckCircle2 className="w-4 h-4 text-red-500" />
-                <span>Thank you! You are now subscribed to MINDMORY circulars.</span>
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                <span>Thank you! Your email is registered for official MINDMORY circulars.</span>
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2.5 max-w-md w-full">
@@ -65,10 +91,11 @@ export default function Footer() {
                 />
                 <button
                   type="submit"
-                  className="bg-red-600 hover:bg-red-700 font-bold text-xs px-6 py-3 rounded-xl transition text-white flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.5)]"
+                  disabled={submitting}
+                  className="bg-red-600 hover:bg-red-700 font-bold text-xs px-6 py-3 rounded-xl transition text-white flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.5)] cursor-pointer"
                 >
-                  <span>Subscribe</span>
-                  <Send className="w-3.5 h-3.5" />
+                  {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span>{submitting ? "Saving..." : "Subscribe"}</span>
                 </button>
               </form>
             )}
@@ -78,7 +105,6 @@ export default function Footer() {
 
       {/* 2. MAIN 4-COLUMN FOOTER */}
       <div className="max-w-7xl mx-auto px-4 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 text-xs">
-        {/* Brand & Socials */}
         <div className="lg:col-span-4 space-y-4">
           <Link href="/" className="inline-block font-black text-2xl tracking-wider text-white">
             MIND<span className="text-red-600">MORY</span>
@@ -107,7 +133,6 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Quick Links */}
         <div className="lg:col-span-2 space-y-3">
           <h4 className="font-bold text-white uppercase tracking-wider text-xs border-b border-neutral-800 pb-2">
             Navigation
@@ -115,27 +140,24 @@ export default function Footer() {
           <ul className="space-y-2 text-neutral-400">
             <li><Link href="/" className="hover:text-red-400 transition">Home Portal</Link></li>
             <li><Link href="/about" className="hover:text-red-400 transition">About Our Vision</Link></li>
-            <li><Link href="/syllabus" className="hover:text-red-400 transition">Syllabus Breakdown</Link></li>
-            <li><Link href="/paper-pattern" className="hover:text-red-400 transition">Paper Rubrics</Link></li>
-            <li><Link href="/results" className="hover:text-red-400 transition">Check Results</Link></li>
-            <li><Link href="/gallery" className="hover:text-red-400 transition">Winners Gallery</Link></li>
+            <li><Link href="/#syllabus" className="hover:text-red-400 transition">Syllabus Breakdown</Link></li>
+            <li><Link href="/#register" className="hover:text-red-400 transition">Registration & Fee</Link></li>
+            <li><Link href="/exam" className="hover:text-red-400 transition">Online Exam Desk</Link></li>
           </ul>
         </div>
 
-        {/* Important Downloads */}
         <div className="lg:col-span-3 space-y-3">
           <h4 className="font-bold text-white uppercase tracking-wider text-xs border-b border-neutral-800 pb-2">
             Downloads & Forms
           </h4>
           <ul className="space-y-2 text-neutral-400">
-            <li><Link href="/downloads" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> School Registration Form</Link></li>
-            <li><Link href="/downloads" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> Desk Labels Slip (Annexure-2)</Link></li>
-            <li><Link href="/downloads" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> GK Official Sample Papers</Link></li>
-            <li><Link href="/downloads" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> Art Contest Guidelines</Link></li>
+            <li><a href={`https://wa.me/${liveWhatsapp}?text=Please%20send%20School%20Registration%20Form%20PDF`} target="_blank" rel="noopener noreferrer" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> School Registration Form</a></li>
+            <li><a href={`https://wa.me/${liveWhatsapp}?text=Please%20send%20Desk%20Labels%20PDF`} target="_blank" rel="noopener noreferrer" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> Desk Labels Slip (Annexure-2)</a></li>
+            <li><a href={`https://wa.me/${liveWhatsapp}?text=Please%20send%20General%20Knowledge%20Syllabus%20PDF`} target="_blank" rel="noopener noreferrer" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> GK Official Sample Papers</a></li>
+            <li><a href={`https://wa.me/${liveWhatsapp}?text=Please%20send%20Art%20Contest%20Guidelines%20PDF`} target="_blank" rel="noopener noreferrer" className="hover:text-red-400 transition flex items-center gap-1.5"><ArrowRight className="w-3 h-3 text-red-500" /> Art Contest Guidelines</a></li>
           </ul>
         </div>
 
-        {/* Contact Info */}
         <div className="lg:col-span-3 space-y-3">
           <h4 className="font-bold text-white uppercase tracking-wider text-xs border-b border-neutral-800 pb-2">
             Secretariat Desk
@@ -143,15 +165,15 @@ export default function Footer() {
           <div className="space-y-2.5 text-neutral-400">
             <p className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <span>{siteContent.header.address}</span>
+              <span>Office # 402, Executive Heights, Gulberg III, Lahore, Pakistan</span>
             </p>
             <p className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-red-500 shrink-0" />
-              <span>{siteContent.header.phone}</span>
+              <span className="font-mono">+{liveWhatsapp}</span>
             </p>
             <p className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-red-500 shrink-0" />
-              <span>{siteContent.header.email}</span>
+              <span>info@mindmory.org</span>
             </p>
           </div>
         </div>
@@ -159,9 +181,19 @@ export default function Footer() {
 
       {/* 3. COPYRIGHT STRIP */}
       <div className="border-t border-neutral-900 py-6 px-4 text-[11px] text-neutral-500 text-center">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
           <p>© 2026 MINDMORY Competitions. All Rights Reserved.</p>
-          <p className="text-neutral-400">Where memories whisper loud.</p>
+          
+          <div className="flex items-center gap-4">
+            <p className="text-neutral-500 hidden sm:block">Where memories whisper loud.</p>
+            <Link 
+              href="/admin" 
+              className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-red-400 transition-colors py-1 px-2.5 rounded-lg hover:bg-neutral-900 font-semibold"
+            >
+              <Lock className="w-3 h-3 text-neutral-500" />
+              <span>Staff & Admin Portal</span>
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -2,23 +2,23 @@
 import React from "react";
 import Link from "next/link";
 import { siteContent } from "@/data/content";
-import { ShieldCheck, Sparkles, Target, Eye, Award, CheckCircle2, ArrowRight } from "lucide-react";
+import { ShieldCheck, Sparkles, Target, Eye, Award, CheckCircle2, ArrowRight, Laptop } from "lucide-react";
 
 export default function AboutPage() {
   const values = [
     {
-      title: "Safe & Supportive Environment",
-      desc: "Providing every school student with an inclusive, encouraging, and pressure-free environment to discover their potential.",
-      icon: <ShieldCheck className="w-8 h-8 text-red-500" />,
+      title: "100% Online & Accessible",
+      desc: "Empowering students to compete conveniently from home via digital assessment links, ensuring an accessible and pressure-free environment.",
+      icon: <Laptop className="w-8 h-8 text-red-500" />,
     },
     {
-      title: "Fair & Transparent Standards",
-      desc: "Equal scoring rubrics, impartial academic juries, and 100% merit-based evaluation across all provinces.",
+      title: "Fair & Merit-Driven Evaluation",
+      desc: "Standardized objective assessment rubrics and impartial evaluations ensuring equal opportunity for candidates across Pakistan.",
       icon: <Sparkles className="w-8 h-8 text-red-500" />,
     },
     {
-      title: "National Recognition",
-      desc: "Rewarding brilliance with cash grants, laptops, tablets, shields, and verifiable lifelong certificates.",
+      title: "Prestigious National Rewards",
+      desc: "Honoring academic excellence with Smart Tablets, Cash Prizes, Gold, Silver & Bronze Medals, and official certificates.",
       icon: <Award className="w-8 h-8 text-red-500" />,
     },
   ];
@@ -31,7 +31,7 @@ export default function AboutPage() {
           <span className="text-red-500 text-xs font-bold uppercase tracking-widest">About MINDMORY</span>
           <h1 className="text-4xl sm:text-5xl font-black">Our Journey & Vision</h1>
           <p className="text-neutral-400 text-sm sm:text-base max-w-2xl mx-auto">
-            Where memories whisper loud. Fostering cognitive excellence in General Knowledge and nurturing raw visual imagination in Art across hundreds of participating schools nationwide.
+            Where memories whisper loud. Fostering cognitive excellence in General Knowledge and inspiring young minds from Class 1 to Grade 10 / O Levels across Pakistan.
           </p>
         </div>
       </section>
@@ -44,7 +44,7 @@ export default function AboutPage() {
           </div>
           <h2 className="text-2xl font-black text-white">Our Mission</h2>
           <p className="text-sm text-neutral-300 leading-relaxed">
-            Our mission is to provide an intellectual, interactive, and competitive ecosystem for school students from Pre-Level to Grade 10. By organizing nationwide General Knowledge assessments and creative Art competitions, MINDMORY prepares young minds to excel beyond conventional school curriculums.
+            Our mission is to cultivate lifelong curiosity and critical thinking by organizing accessible, premier online General Knowledge and creative academic contests. We empower students from Class 1 through Grade 10 & O Levels to learn beyond textbooks and celebrate intellectual discovery.
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export default function AboutPage() {
           </div>
           <h2 className="text-2xl font-black text-white">Our Vision</h2>
           <p className="text-sm text-neutral-300 leading-relaxed">
-            To be Pakistan’s leading school competition authority where academic achievements and creative masterworks become milestone memories. We strive to give teachers, coordinators, and students a transparent stage that honors their hard work.
+            To create an empowering national platform where young talent is recognized and rewarded. We envision a generation of curious thinkers equipped with global awareness, analytical skills, and confidence to make milestone memories on a prestigious stage.
           </p>
         </div>
       </section>
@@ -81,17 +81,17 @@ export default function AboutPage() {
       {/* Advisory & Secretariat Notice */}
       <section className="py-16 px-4 bg-neutral-950 border-t border-neutral-900 text-center">
         <div className="max-w-3xl mx-auto space-y-4">
-          <h3 className="text-2xl font-black">Ready to Enroll Your Institute?</h3>
+          <h3 className="text-2xl font-black">Ready to Register for Mindmory 2026?</h3>
           <p className="text-xs sm:text-sm text-neutral-400">
-            Join hundreds of institutions already registered for General Knowledge & Art Contests 2026–27.
+            Enrolments are open for candidates from Class 1 to Grade 10 & O Levels. Take the exam conveniently from home.
           </p>
           <a
-            href={`https://wa.me/${siteContent.header.whatsapp}?text=Institute%20Registration%20Inquiry`}
+            href={`https://wa.me/${siteContent.header.whatsapp}?text=Mindmory%20Contest%20Registration%20Inquiry`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition text-sm shadow-[0_0_20px_rgba(220,38,38,0.5)]"
           >
-            <span>Connect with Secretariat</span> <ArrowRight className="w-4 h-4" />
+            <span>Register via WhatsApp</span> <ArrowRight className="w-4 h-4" />
           </a>
         </div>
       </section>

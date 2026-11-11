@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import PopupModal from "@/components/PopupModal";
-import CustomCursor from "@/components/CustomCursor";
 
 export const metadata: Metadata = {
-  title: "HRCA Mega Events - National Competitions & Awards",
-  description: "Join the premier national English, Science, Art & Creative Writing competitions.",
+  title: "Mindmory Assessment & Examination Portal",
+  description: "Official Nationwide Academic Competition & Testing Desk"
 };
 
 export default function RootLayout({
@@ -16,11 +13,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-slate-50 text-slate-900 antialiased font-sans selection:bg-amber-400 selection:text-slate-950">
-        <CustomCursor />
-        <PopupModal />
-        <Navbar />
-        <main>{children}</main>
+      <body className="bg-black text-white min-h-screen selection:bg-red-600 selection:text-white">
+        {children}
       </body>
     </html>
   );

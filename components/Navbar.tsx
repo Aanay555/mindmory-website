@@ -1,221 +1,196 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { siteContent } from "@/data/content";
-import { Mail, Phone, MapPin, Menu, X, Sparkles } from "lucide-react";
+import { 
+  Award, 
+  Menu, 
+  X, 
+  Laptop, 
+  ArrowRight,
+  Phone,
+  Calendar,
+  Clock,
+  Sparkles
+} from "lucide-react";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState<"login" | "signup" | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Sabhi links ko seedha actual page routes par set kiya hai
-  const navLinks = [
-    { name: "Home", href: "/" },
-    { name: "About Us", href: "/about" },
-    { name: "Syllabus", href: "/syllabus", isSpecial: true },
-    { name: "Paper Pattern", href: "/paper-pattern" },
-    { name: "Gallery", href: "/gallery" },
-    { name: "Results", href: "/results", isSpecial: true },
-    { name: "Downloads", href: "/downloads" },
-    { name: "Contact Us", href: "/contact" },
-  ];
+  // Live dynamic settings from Admin API
+  const [liveDeadline, setLiveDeadline] = useState("30 December 2026");
+  const [liveExamDate, setLiveExamDate] = useState("15 January 2027");
+  const [liveResultsDate, setLiveResultsDate] = useState("25 January 2027");
+  const [liveFee, setLiveFee] = useState<number>(1100);
+  const [whatsappNum, setWhatsappNum] = useState("923000000000");
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data) {
+          if (data.deadline) setLiveDeadline(data.deadline);
+          if (data.examDate) setLiveExamDate(data.examDate);
+          if (data.resultsDate) setLiveResultsDate(data.resultsDate);
+          if (data.fee) setLiveFee(Number(data.fee));
+          if (data.whatsapp) setWhatsappNum(data.whatsapp.replace(/[^0-9]/g, ""));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <>
-      <header className="w-full bg-neutral-950 text-white shadow-xl sticky top-0 z-50 border-b border-neutral-800">
-        {/* Top Mini Contact Bar */}
-        <div className="bg-black text-neutral-400 text-xs py-2 px-4 border-b border-neutral-900">
-          <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
-            <div className="flex items-center gap-5 flex-wrap">
-              <span className="flex items-center gap-1.5 hover:text-red-400 transition">
-                <Mail className="w-3.5 h-3.5 text-red-500" />
-                {siteContent.header.email}
-              </span>
-              <span className="flex items-center gap-1.5 hover:text-red-400 transition">
-                <Phone className="w-3.5 h-3.5 text-red-500" />
-                {siteContent.header.phone}
-              </span>
-            </div>
-            <div className="hidden md:flex items-center gap-1.5 text-neutral-400">
-              <MapPin className="w-3.5 h-3.5 text-red-500" />
-              {siteContent.header.address}
-            </div>
-          </div>
-        </div>
+      <nav className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 bg-neutral-950/90 border-b border-neutral-900 backdrop-blur-md sticky top-0 z-50">
+        
+        {/* 1. BRAND LOGO */}
+        <Link href="/" className="flex items-center gap-2">
+          <span className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-black text-white text-base shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+            M
+          </span>
+          <span className="font-black text-lg tracking-wider text-white">
+            MIND<span className="text-red-500">MORY</span>
+          </span>
+        </Link>
 
-        {/* Main Navbar */}
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-baseline gap-1.5 font-black text-2xl tracking-wider shrink-0">
-            <span className="text-white">MIND<span className="text-red-600">MORY</span></span>
+        {/* 2. ALL MAIN MENU LINKS (SEPARATE DEDICATED PAGES - NO POPUP MODALS) */}
+        <div className="hidden xl:flex items-center gap-5 text-xs font-bold text-neutral-300">
+          <Link href="/" className="hover:text-white transition">
+            Home
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden xl:flex items-center gap-5 font-semibold text-xs 2xl:text-sm text-neutral-300">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className="relative py-1 group flex items-center gap-1.5 hover:text-white transition-colors"
-              >
-                {link.name}
-                {link.isSpecial && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 red-blink-dot" />
-                )}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 rounded-full transition-all duration-300 group-hover:w-full" />
-              </Link>
-            ))}
-          </nav>
+          <Link href="/about" className="hover:text-white transition">
+            About Us
+          </Link>
 
-          {/* Login / Signup Buttons */}
-          <div className="hidden md:flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={() => setShowAuthModal("login")}
-              className="bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs px-4 py-2 rounded-full transition border border-neutral-700"
-            >
-              LOGIN
-            </button>
-            <button
-              onClick={() => setShowAuthModal("signup")}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-full transition shadow-[0_0_12px_rgba(220,38,38,0.5)] border border-red-500"
-            >
-              SIGNUP
-            </button>
-          </div>
+          <Link href="/paper-pattern" className="hover:text-red-400 transition">
+            Paper Pattern
+          </Link>
 
-          {/* Mobile Hamburger */}
-          <button 
-            onClick={() => setIsOpen(!isOpen)} 
-            className="xl:hidden p-2 text-neutral-300 hover:text-white"
-            aria-label="Toggle Navigation"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <Link href="/syllabus" className="hover:text-white transition">
+            Syllabus
+          </Link>
+
+          <Link href="/downloads" className="hover:text-white transition">
+            Downloads
+          </Link>
+
+          <Link href="/gallery" className="hover:text-white transition">
+            Gallery
+          </Link>
+
+          <Link href="/results" className="hover:text-red-400 transition flex items-center gap-1">
+            <Award className="w-3.5 h-3.5 text-red-500" />
+            <span>Results</span>
+          </Link>
+
+          <Link href="/contact" className="hover:text-white transition">
+            Contact Us
+          </Link>
         </div>
 
-        {/* Mobile Dropdown */}
-        {isOpen && (
-          <div className="xl:hidden bg-neutral-900 border-t border-neutral-800 px-6 py-5 space-y-3 font-medium text-sm">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-between py-2 border-b border-neutral-800 text-neutral-300 hover:text-red-400"
-              >
-                <span>{link.name}</span>
-                {link.isSpecial && <span className="w-2 h-2 rounded-full bg-red-600 red-blink-dot" />}
-              </Link>
-            ))}
+        {/* 3. RIGHT SIDE ACTIONS (STUDENT LOGIN & REGISTRATION) */}
+        <div className="flex items-center gap-3">
+          
+          {/* Direct Link to Student Login Page (No Popup, No PIN) */}
+          <Link
+            href="/student-login"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-xs font-bold text-neutral-200 hover:text-white transition cursor-pointer"
+          >
+            <Laptop className="w-3.5 h-3.5 text-red-500" />
+            <span>Student Login</span>
+          </Link>
 
-            <div className="flex gap-2 pt-3">
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  setShowAuthModal("login");
-                }}
-                className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs py-2.5 rounded-xl border border-neutral-700 text-center"
-              >
-                LOGIN
-              </button>
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  setShowAuthModal("signup");
-                }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2.5 rounded-xl text-center"
-              >
-                SIGNUP
-              </button>
-            </div>
-          </div>
-        )}
-      </header>
+          {/* Register Candidate CTA Button */}
+          <Link
+            href="/register"
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-[0_0_15px_rgba(220,38,38,0.4)] flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>Register Now</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
 
-      {/* Login & Signup Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-neutral-900 border-2 border-red-600 rounded-2xl max-w-md w-full p-6 text-white relative shadow-2xl">
-            <button
-              onClick={() => setShowAuthModal(null)}
-              className="absolute top-4 right-4 text-neutral-400 hover:text-white p-1 rounded-full"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="xl:hidden p-2 text-neutral-400 hover:text-white rounded-lg bg-neutral-900 border border-neutral-800"
+            aria-label="Toggle Navigation"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
 
-            <div className="text-center space-y-1 mb-6">
-              <span className="text-red-500 font-bold uppercase text-[10px] tracking-widest">
-                School & Candidate Portal
-              </span>
-              <h3 className="text-2xl font-black">
-                {showAuthModal === "login" ? "Welcome Back" : "Register School"}
-              </h3>
-              <p className="text-xs text-neutral-400">
-                {showAuthModal === "login" 
-                  ? "Sign in to access candidate gazette and enrollment records" 
-                  : "Create school administrator credentials"}
-              </p>
-            </div>
+        </div>
+      </nav>
 
-            <form onSubmit={(e) => { e.preventDefault(); alert("Portal active. Credentials verified!"); setShowAuthModal(null); }} className="space-y-3.5">
-              {showAuthModal === "signup" && (
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">School / Institute Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Institute Name"
-                    className="w-full bg-black border border-neutral-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-red-600"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Center Code / Email</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="admin@school.edu.pk"
-                  className="w-full bg-black border border-neutral-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-red-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  className="w-full bg-black border border-neutral-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-red-600"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 font-bold text-xs py-3 rounded-xl transition text-white mt-2 shadow-[0_0_15px_rgba(220,38,38,0.5)]"
-              >
-                {showAuthModal === "login" ? "LOG IN" : "CREATE ACCOUNT"}
-              </button>
-            </form>
-
-            <div className="mt-4 text-center text-xs text-neutral-400">
-              {showAuthModal === "login" ? (
-                <p>
-                  New institute?{" "}
-                  <button onClick={() => setShowAuthModal("signup")} className="text-red-400 font-bold hover:underline">
-                    Create account
-                  </button>
-                </p>
-              ) : (
-                <p>
-                  Already registered?{" "}
-                  <button onClick={() => setShowAuthModal("login")} className="text-red-400 font-bold hover:underline">
-                    Log in
-                  </button>
-                </p>
-              )}
-            </div>
-          </div>
+      {/* 4. RESPONSIVE MOBILE DRAWER */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden fixed inset-x-0 top-[57px] bg-neutral-950 border-b border-neutral-850 p-5 space-y-3 z-40 shadow-2xl text-xs font-bold animate-in fade-in duration-150">
+          <Link 
+            href="/" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-neutral-300 hover:text-white"
+          >
+            Home
+          </Link>
+          <Link 
+            href="/about" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-neutral-300 hover:text-white"
+          >
+            About Us
+          </Link>
+          <Link 
+            href="/paper-pattern" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-red-400 hover:text-red-300"
+          >
+            Paper Pattern
+          </Link>
+          <Link 
+            href="/syllabus" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-neutral-300 hover:text-white"
+          >
+            Syllabus
+          </Link>
+          <Link 
+            href="/downloads" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-neutral-300 hover:text-white"
+          >
+            Downloads
+          </Link>
+          <Link 
+            href="/gallery" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-neutral-300 hover:text-white"
+          >
+            Gallery
+          </Link>
+          <Link 
+            href="/results" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-red-400 hover:text-red-300 flex items-center gap-1.5"
+          >
+            <Award className="w-3.5 h-3.5 text-red-500" />
+            <span>Results</span>
+          </Link>
+          <Link 
+            href="/contact" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-neutral-300 hover:text-white"
+          >
+            Contact Us
+          </Link>
+          <Link 
+            href="/student-login" 
+            onClick={() => setMobileMenuOpen(false)} 
+            className="block py-2 text-white border-t border-neutral-900 pt-3 flex items-center gap-2"
+          >
+            <Laptop className="w-3.5 h-3.5 text-red-500" />
+            <span>Student Login</span>
+          </Link>
         </div>
       )}
     </>
