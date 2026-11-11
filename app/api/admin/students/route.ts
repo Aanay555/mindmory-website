@@ -2,64 +2,73 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 
-// Backend-only secure client initialize karein
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
+// Helper function to lazily get Supabase client safely
+function getAdminSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "placeholder-key";
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 // 1. GET: Students list with Auth Guard
 export async function GET() {
   try {
     const cookieStore = await cookies();
-    const session = cookieStore.get("mindmory_admin_session");
+    const adminSession = cookieStore.get("admin_session");
 
-    // Strict security check
-    if (!session || session.value !== "authenticated_super_admin") {
-      return NextResponse.json({ error: "Unauthorized access blocked." }, { status: 401 });
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { data: students, error } = await adminSupabase
-      .from("students")
-      .select("id, roll_no, full_name, grade, school_name, whatsapp, trx_id, fee_amount, payment_status, exam_status, created_at")
-      .order("created_at", { ascending: false });
+    const supabase = getAdminSupabase();
+    const { data: students, error } = await supabase
+      .from("candidates")
+      .select("*")
+      .order("id", { ascending: true });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ students: students || [] });
-  } catch (err) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ students });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Server Error" }, { status: 500 });
   }
 }
 
-// 2. POST: Status Update with Auth Guard
-export async function POST(req: Request) {
+// 2. PATCH: Update Student (Status, details)
+export async function PATCH(req: Request) {
   try {
     const cookieStore = await cookies();
-    const session = cookieStore.get("mindmory_admin_session");
+    const adminSession = cookieStore.get("admin_session");
 
-    if (!session || session.value !== "authenticated_super_admin") {
-      return NextResponse.json({ error: "Unauthorized action blocked." }, { status: 401 });
+    if (!adminSession || adminSession.value !== "authenticated") {
+      return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { rollNo, status } = await req.json();
+    const body = await req.json();
+    const { rollNo, ...updateData } = body;
 
-    if (!rollNo || !["approved", "rejected", "pending"].includes(status)) {
-      return NextResponse.json({ error: "Invalid parameters supplied" }, { status: 400 });
+    if (!rollNo) {
+      return NextResponse.json({ error: "Roll No is required" }, { status: 400 });
     }
 
-    const { error } = await adminSupabase
-      .from("students")
-      .update({ payment_status: status })
-      .eq("roll_no", rollNo);
+    const supabase = getAdminSupabase();
+    const { data, error } = await supabase
+      .from("candidates")
+      .update(updateData)
+      .eq("roll_no", rollNo)
+      .select();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: true, updated: data });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Server Error" }, { status: 500 });
   }
 }
