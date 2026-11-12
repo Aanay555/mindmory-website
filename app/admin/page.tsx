@@ -382,6 +382,54 @@ export default function AdminPortalPage() {
   const approvedCount = students.filter((s) => s.payment_status?.toLowerCase() === "approved").length;
   const pendingCount = students.filter((s) => s.payment_status?.toLowerCase() === "pending").length;
 
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-neutral-950 border border-neutral-850 rounded-3xl p-8 space-y-6 shadow-2xl">
+          <div className="flex flex-col items-center text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-red-950 border border-red-800 flex items-center justify-center text-red-500">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h1 className="text-xl font-black tracking-tight">Admin Portal Locked</h1>
+            <p className="text-xs text-neutral-400">Enter Secretariat Security PIN to access candidate records and settings.</p>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (pinInput.trim() === adminPin) {
+                setIsUnlocked(true);
+                setPinError("");
+              } else {
+                setPinError("Invalid PIN. Please enter the correct admin PIN.");
+              }
+            }}
+            className="space-y-4"
+          >
+            <input
+              type="password"
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="Enter Admin PIN"
+              autoFocus
+              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-mono text-white focus:outline-none focus:border-red-600"
+            />
+            {pinError && <p className="text-xs text-red-400 text-center font-semibold">{pinError}</p>}
+            <button
+              type="submit"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+            >
+              Unlock Admin Dashboard
+            </button>
+          </form>
+          <div className="text-center">
+            <Link href="/" className="text-xs text-neutral-500 hover:text-white underline">
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-black text-neutral-100 font-sans pt-8 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
