@@ -26,6 +26,8 @@ import {
   Lock,
   Download,
   Menu,
+  PlayCircle,
+  Search,
   Trophy as TrophyIcon
 } from "lucide-react";
 
@@ -140,24 +142,49 @@ export default function HomePage() {
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testRoll, setTestRoll] = useState("");
+
   useEffect(() => {
-    try {
-      const storedSettings = localStorage.getItem("mindmory_site_settings");
-      if (storedSettings) {
-        const parsed = JSON.parse(storedSettings);
-        if (parsed.deadline) setDeadline(parsed.deadline);
-        if (parsed.examDate) setExamDate(parsed.examDate);
-        if (parsed.fee) setFee(Number(parsed.fee));
-        if (parsed.whatsapp) setWhatsapp(parsed.whatsapp.replace(/[^0-9]/g, ""));
-      }
-    } catch {}
+    const applySettings = (data: {
+      deadline?: string;
+      examDate?: string;
+      fee?: number | string;
+      whatsapp?: string;
+    }) => {
+      if (!data) return;
+      if (data.deadline) setDeadline(data.deadline);
+      if (data.examDate) setExamDate(data.examDate);
+      if (data.fee !== undefined && data.fee !== null && data.fee !== "") setFee(Number(data.fee));
+      if (data.whatsapp) setWhatsapp(String(data.whatsapp).replace(/[^0-9]/g, ""));
+    };
+
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => applySettings(data))
+      .catch(() => {
+        try {
+          const storedSettings = localStorage.getItem("mindmory_site_settings");
+          if (storedSettings) applySettings(JSON.parse(storedSettings));
+        } catch {}
+      });
 
     try {
       const stored = localStorage.getItem("mindmory_disciplines");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setDisciplines(parsed);
+          const hasGk = parsed.some((d: Discipline) => d.id === "gk");
+          const hasArt = parsed.some((d: Discipline) => d.id === "art");
+
+          const consolidated = [...parsed];
+          if (!hasGk) consolidated.unshift(defaultDisciplines[0]);
+          if (!hasArt) {
+            const gkIndex = consolidated.findIndex((d: Discipline) => d.id === "gk");
+            consolidated.splice(Math.max(gkIndex, 0) + 1, 0, defaultDisciplines[1]);
+          }
+
+          setDisciplines(consolidated);
           return;
         }
       }
@@ -469,13 +496,14 @@ export default function HomePage() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 
-                <Link
-                  href="/student-login"
-                  className="px-6 py-3.5 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-red-900/60 text-white font-bold rounded-2xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                <button
+                  type="button"
+                  onClick={() => setShowTestModal(true)}
+                  className="px-6 py-3.5 bg-neutral-900 hover:bg-neutral-850 border border-red-900/60 hover:border-red-600 text-white font-bold rounded-2xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-lg"
                 >
-                  <Laptop className="w-4 h-4 text-red-500" />
-                  <span>Candidate Portal</span>
-                </Link>
+                  <Laptop className="w-4 h-4 text-red-500 animate-pulse" />
+                  <span>Take Online Test</span>
+                </button>
 
                 <Link
                   href="/paper-pattern"
@@ -561,9 +589,14 @@ export default function HomePage() {
                         <span className="text-xs font-mono font-bold text-green-400">+{whatsapp}</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-neutral-400">
-                      Official Support
-                    </span>
+                    <a
+                      href={`https://wa.me/${whatsapp}?text=Hello%20Mindmory%20Secretariat`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-bold text-green-400 hover:text-green-300 underline"
+                    >
+                      Direct Chat
+                    </a>
                   </div>
                 </div>
 
@@ -589,25 +622,26 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                 <span className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-widest">
-                  OFFICIAL CANDIDATE DESK
+                  LIVE DIGITAL TESTING PORTAL
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white">
-                Candidate Dossier, Fee Clearance & Examination Desk
+                Online Candidate Examination & Mock Test Portal
               </h2>
               <p className="text-xs text-neutral-400 leading-relaxed">
-                Enrolled students can enter their assigned Roll Number to verify payment clearance, view candidate dossier, and launch the computerized exam hall.
+                Registered students can enter their official Roll Number to open the candidate desk and start the computerized paper, or practice with the Grade 1 to 10 model tests.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-              <Link
-                href="/student-login"
+              <button
+                type="button"
+                onClick={() => setShowTestModal(true)}
                 className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-lg shadow-red-600/30 cursor-pointer"
               >
-                <Laptop className="w-4 h-4" />
-                <span>Access Candidate Desk →</span>
-              </Link>
+                <PlayCircle className="w-4 h-4" />
+                <span>Start Online Test</span>
+              </button>
 
               <Link
                 href="/paper-pattern"
@@ -908,6 +942,81 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {showTestModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 text-white relative shadow-2xl text-left">
+            <button
+              type="button"
+              onClick={() => setShowTestModal(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-950 border border-red-800 flex items-center justify-center text-red-500">
+                <Laptop className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] text-red-500 font-bold uppercase tracking-widest block">EXAMINATION DESK</span>
+                <h3 className="text-base font-black">Enter Examination Hall</h3>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-400">
+              Enter your assigned Roll Number to open the candidate desk, or leave it blank to practice with the model papers.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const roll = testRoll.trim();
+                if (!roll) {
+                  window.location.href = "/paper-pattern";
+                } else {
+                  window.location.href = `/student-login?roll=${encodeURIComponent(roll)}`;
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  Candidate Roll Number
+                </label>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-500" />
+                  <input
+                    type="text"
+                    placeholder="e.g. MM-2026-1001 (or leave blank for practice)"
+                    value={testRoll}
+                    onChange={(e) => setTestRoll(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-white tracking-widest uppercase focus:outline-none focus:border-red-600"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <PlayCircle className="w-4 h-4" />
+                <span>Launch Test Terminal</span>
+              </button>
+            </form>
+
+            <div className="border-t border-neutral-900 pt-3 text-center">
+              <Link
+                href="/paper-pattern"
+                onClick={() => setShowTestModal(false)}
+                className="text-[11px] text-red-400 hover:text-red-300 font-semibold"
+              >
+                Or view model papers and the printable version
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 9. MODAL: ADD CUSTOM CURRICULUM DISCIPLINE */}
       {showAddModal && (

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, User, School, CheckCircle2, AlertCircle, Laptop, ShieldCheck } from "lucide-react";
@@ -10,6 +10,11 @@ export default function StudentLoginPage() {
   const [rollInput, setRollInput] = useState("");
   const [candidate, setCandidate] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    const roll = new URLSearchParams(window.location.search).get("roll");
+    if (roll) setRollInput(roll);
+  }, []);
 
   const handleSearchRoll = (e: React.FormEvent) => {
     e.preventDefault();
