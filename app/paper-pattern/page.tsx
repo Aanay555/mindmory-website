@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -62,7 +62,7 @@ const allPapersData: ClassPaper[] = [
       { id: 18, part: "Part 4: School & Study", q: "Which day is the first day of the week?", options: ["a) Monday", "b) Sunday", "c) Friday"], correct: "b" },
       { id: 19, part: "Part 4: School & Study", q: "Who teaches us in class?", options: ["a) Doctor", "b) Teacher", "c) Farmer"], correct: "b" },
       { id: 20, part: "Part 4: School & Study", q: "We keep our books in a?", options: ["a) Bag", "b) Fridge", "c) Box"], correct: "a" },
-      { id: 21, part: "Part 5: Islam & Values", q: "Who is our last Prophet?", options: ["a) Hazrat Isa A.S", "b) Hazrat Muhammad ﷺ", "c) Hazrat Musa A.S"], correct: "b" },
+      { id: 21, part: "Part 5: Islam & Values", q: "Who is our last Prophet?", options: ["a) Hazrat Isa A.S", "b) Hazrat Muhammad ï·º", "c) Hazrat Musa A.S"], correct: "b" },
       { id: 22, part: "Part 5: Islam & Values", q: "How many times do we pray daily?", options: ["a) 3", "b) 5", "c) 7"], correct: "b" },
       { id: 23, part: "Part 5: Islam & Values", q: "What do we say before eating?", options: ["a) Alhamdulillah", "b) Bismillah", "c) Mashallah"], correct: "b" },
       { id: 24, part: "Part 5: Islam & Values", q: "Our Holy Book is?", options: ["a) Bible", "b) Torah", "c) Quran"], correct: "c" },
@@ -129,7 +129,7 @@ const allPapersData: ClassPaper[] = [
       { id: 3, part: "Part 1: Pakistan & World", q: "Who is called the 'Father of the Nation'?", options: ["a) Allama Iqbal", "b) Quaid-e-Azam", "c) Liaquat Ali Khan"], correct: "b" },
       { id: 4, part: "Part 1: Pakistan & World", q: "How many continents are there in the world?", options: ["a) 5", "b) 6", "c) 7"], correct: "c" },
       { id: 5, part: "Part 1: Pakistan & World", q: "Currency of Pakistan is?", options: ["a) Dollar", "b) Rupee", "c) Riyal"], correct: "b" },
-      { id: 6, part: "Part 2: Science", q: "Water boils at?", options: ["a) 50°C", "b) 100°C", "c) 0°C"], correct: "b" },
+      { id: 6, part: "Part 2: Science", q: "Water boils at?", options: ["a) 50Â°C", "b) 100Â°C", "c) 0Â°C"], correct: "b" },
       { id: 7, part: "Part 2: Science", q: "The process by which plants make food is called?", options: ["a) Respiration", "b) Photosynthesis", "c) Digestion"], correct: "b" },
       { id: 8, part: "Part 2: Science", q: "Human body has how many bones?", options: ["a) 206", "b) 300", "c) 150"], correct: "a" },
       { id: 9, part: "Part 2: Science", q: "Which planet is known as the 'Red Planet'?", options: ["a) Earth", "b) Mars", "c) Jupiter"], correct: "b" },
@@ -183,7 +183,7 @@ const allPapersData: ClassPaper[] = [
       { id: 16, part: "World & Geography", q: "The longest river in the world is?", options: ["a) Indus", "b) Nile", "c) Amazon"], correct: "b" },
       { id: 17, part: "World & Geography", q: "Taj Mahal is located in?", options: ["a) Pakistan", "b) India", "c) Afghanistan"], correct: "b" },
       { id: 18, part: "Science & Technology", q: "The process of making food by plants is called?", options: ["a) Respiration", "b) Photosynthesis", "c) Digestion"], correct: "b" },
-      { id: 19, part: "Science & Technology", q: "Water boils at?", options: ["a) 50°C", "b) 100°C", "c) 0°C"], correct: "b" },
+      { id: 19, part: "Science & Technology", q: "Water boils at?", options: ["a) 50Â°C", "b) 100Â°C", "c) 0Â°C"], correct: "b" },
       { id: 20, part: "Science & Technology", q: "Human body has how many bones?", options: ["a) 206", "b) 250", "c) 300"], correct: "a" },
       { id: 21, part: "Science & Technology", q: "Which organ purifies our blood?", options: ["a) Heart", "b) Lungs", "c) Kidney"], correct: "c" },
       { id: 22, part: "Science & Technology", q: "Which vitamin do we get from sunlight?", options: ["a) Vitamin A", "b) Vitamin C", "c) Vitamin D"], correct: "c" },
@@ -230,7 +230,7 @@ const allPapersData: ClassPaper[] = [
       { id: 22, part: "Science & Technology", q: "WWW stands for?", options: ["a) World Wide Web", "b) World Wide Work", "c) World Web Wire"], correct: "a" },
       { id: 23, part: "Science & Technology", q: "Device used to measure temperature is?", options: ["a) Barometer", "b) Thermometer", "c) Hygrometer"], correct: "b" },
       { id: 24, part: "Islamiat & General Ethics", q: "How many Surahs are there in the Holy Quran?", options: ["a) 110", "b) 114", "c) 120"], correct: "b" },
-      { id: 25, part: "Islamiat & General Ethics", q: "The last Prophet of Allah is?", options: ["a) Hazrat Musa A.S", "b) Hazrat Isa A.S", "c) Hazrat Muhammad ﷺ"], correct: "c" },
+      { id: 25, part: "Islamiat & General Ethics", q: "The last Prophet of Allah is?", options: ["a) Hazrat Musa A.S", "b) Hazrat Isa A.S", "c) Hazrat Muhammad ï·º"], correct: "c" },
       { id: 26, part: "Islamiat & General Ethics", q: "Fasting in Ramadan is the _ pillar of Islam.", options: ["a) 3rd", "b) 4th", "c) 5th"], correct: "b" },
       { id: 27, part: "Islamiat & General Ethics", q: "We should respect our?", options: ["a) Elders only", "b) Teachers only", "c) Elders and Teachers"], correct: "c" },
       { id: 28, part: "Sports & Famous Personalities", q: "The national game of Pakistan is?", options: ["a) Cricket", "b) Hockey", "c) Squash"], correct: "b" },
@@ -347,7 +347,7 @@ const allPapersData: ClassPaper[] = [
       { id: 16, part: "Science", q: "Acid rain is caused by?", options: ["a) CO2 and CO", "b) SO2 and NO2", "c) O2 and N2"], correct: "b" },
       { id: 17, part: "Science", q: "The human skeleton has how many bones?", options: ["a) 206", "b) 208", "c) 210"], correct: "a" },
       { id: 18, part: "Science", q: "Which gas is used in photosynthesis?", options: ["a) Oxygen", "b) Carbon Dioxide", "c) Nitrogen"], correct: "b" },
-      { id: 19, part: "Science", q: "The boiling point of water at sea level is?", options: ["a) 90°C", "b) 100°C", "c) 110°C"], correct: "b" },
+      { id: 19, part: "Science", q: "The boiling point of water at sea level is?", options: ["a) 90Â°C", "b) 100Â°C", "c) 110Â°C"], correct: "b" },
       { id: 20, part: "Science", q: "An eclipse occurs when?", options: ["a) Earth comes between Sun and Moon", "b) Moon comes between Sun and Earth", "c) Both a and b"], correct: "c" },
       { id: 21, part: "Science", q: "The study of fossils is called?", options: ["a) Paleontology", "b) Archaeology", "c) Anthropology"], correct: "a" },
       { id: 22, part: "Islamiat & Ethics", q: "The last book revealed by Allah is?", options: ["a) Taurat", "b) Injeel", "c) Quran"], correct: "c" },
@@ -391,7 +391,7 @@ const allPapersData: ClassPaper[] = [
       { id: 19, part: "Science", q: "The unit of electric current is?", options: ["a) Volt", "b) Ampere", "c) Ohm"], correct: "b" },
       { id: 20, part: "Science", q: "DNA stands for?", options: ["a) Deoxyribo Nucleic Acid", "b) Di Nucleic Acid", "c) Dual Nitrogen Acid"], correct: "a" },
       { id: 21, part: "Science", q: "The hottest planet of solar system is?", options: ["a) Mercury", "b) Venus", "c) Mars"], correct: "b" },
-      { id: 22, part: "Islamiat & Ethics", q: "How many Ghazwat were fought by Holy Prophet ﷺ?", options: ["a) 23", "b) 27", "c) 30"], correct: "b" },
+      { id: 22, part: "Islamiat & Ethics", q: "How many Ghazwat were fought by Holy Prophet ï·º?", options: ["a) 23", "b) 27", "c) 30"], correct: "b" },
       { id: 23, part: "Islamiat & Ethics", q: "The first woman to accept Islam was?", options: ["a) Hazrat Aisha R.A", "b) Hazrat Khadija R.A", "c) Hazrat Fatima R.A"], correct: "b" },
       { id: 24, part: "Islamiat & Ethics", q: "The night of 27th Ramadan is called?", options: ["a) Shab-e-Barat", "b) Shab-e-Qadr", "c) Shab-e-Miraj"], correct: "b" },
       { id: 25, part: "Islamiat & Ethics", q: "The concept of 'Ummah' in Islam means?", options: ["a) Nation", "b) Community", "c) Mosque"], correct: "b" },
@@ -511,7 +511,7 @@ export default function PaperPatternPage() {
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-lg shadow-red-600/30"
             >
               <Laptop className="w-3.5 h-3.5" />
-              <span>Official Timed Test (Candidate Portal) →</span>
+              <span>Official Timed Test (Candidate Portal) â†’</span>
             </Link>
 
             <button
@@ -612,10 +612,10 @@ export default function PaperPatternPage() {
             </div>
             <p className="text-xs text-neutral-300">
               {percentage >= 80 
-                ? "🌟 Outstanding preparation! You are ready for the National Distinction Medal."
+                ? "ðŸŒŸ Outstanding preparation! You are ready for the National Distinction Medal."
                 : percentage >= 50
-                ? "👍 Good attempt! Review the red incorrect questions below to improve your score."
-                : "📚 Practice again to build speed and accuracy before official test day."}
+                ? "ðŸ‘ Good attempt! Review the red incorrect questions below to improve your score."
+                : "ðŸ“š Practice again to build speed and accuracy before official test day."}
             </p>
           </div>
         )}
@@ -629,11 +629,11 @@ export default function PaperPatternPage() {
             </h2>
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-neutral-400 pt-1 font-semibold">
               <span className="text-red-400 font-bold">{currentPaper.gradeTitle}</span>
-              <span>•</span>
+              <span>â€¢</span>
               <span className="text-white">{currentPaper.subject}</span>
-              <span>•</span>
+              <span>â€¢</span>
               <span>Time: {currentPaper.duration}</span>
-              <span>•</span>
+              <span>â€¢</span>
               <span>Total Questions: {currentPaper.questions.length} (30 Marks)</span>
             </div>
             <p className="text-[11px] text-amber-400/90 pt-1">
@@ -713,10 +713,10 @@ export default function PaperPatternPage() {
                     {isAttempted && (
                       <div className="pt-2 border-t border-neutral-900 flex items-center justify-between text-[11px] font-mono">
                         {isCorrect ? (
-                          <span className="text-green-400 font-bold">✓ Correct Answer!</span>
+                          <span className="text-green-400 font-bold">âœ“ Correct Answer!</span>
                         ) : (
                           <span className="text-red-400">
-                            ✗ Incorrect. Correct is: <strong className="text-green-400 uppercase">({item.correct})</strong>
+                            âœ— Incorrect. Correct is: <strong className="text-green-400 uppercase">({item.correct})</strong>
                           </span>
                         )}
                       </div>
@@ -735,7 +735,7 @@ export default function PaperPatternPage() {
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-900">
             <button
               type="button"
-              onClick={() => setIsSubmitted(true)}
+              onClick={() => { setIsSubmitted(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer shadow-lg shadow-green-600/30 flex items-center justify-center gap-2"
             >
               <Check className="w-4 h-4" />
@@ -746,7 +746,7 @@ export default function PaperPatternPage() {
               href="/student-login"
               className="text-xs text-neutral-400 hover:text-red-400 font-bold underline"
             >
-              Ready for Official Exam? Enter Candidate Portal →
+              Ready for Official Exam? Enter Candidate Portal â†’
             </Link>
           </div>
 
@@ -756,3 +756,4 @@ export default function PaperPatternPage() {
     </div>
   );
 }
+

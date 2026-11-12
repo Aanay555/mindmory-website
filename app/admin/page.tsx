@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -113,6 +113,9 @@ const defaultDisciplines = [
 ];
 
 export default function AdminPortalPage() {
+    const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
   const [activeTab, setActiveTab] = useState<"students" | "syllabus" | "settings">("students");
 
   const [students, setStudents] = useState<any[]>([]);
@@ -547,10 +550,10 @@ export default function AdminPortalPage() {
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span className="font-bold text-white block">{st.name}</span>
-                            <span className="text-[11px] text-neutral-500 block">{st.fatherName || "—"}</span>
+                            <span className="text-[11px] text-neutral-500 block">{st.fatherName || "â€”"}</span>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="text-neutral-400">{st.grade} • </span>
+                            <span className="text-neutral-400">{st.grade} â€¢ </span>
                             <span className="text-amber-400 font-semibold">{st.category}</span>
                           </td>
                           <td className="py-3 px-4 text-neutral-400 truncate max-w-xs">{st.school}</td>
@@ -566,9 +569,9 @@ export default function AdminPortalPage() {
                                   : "bg-amber-950/80 text-amber-400 border-amber-800"
                               }`}
                             >
-                              <option value="Approved" className="bg-black text-green-400">✓ Approved</option>
-                              <option value="Pending" className="bg-black text-amber-400">⏳ Pending</option>
-                              <option value="Rejected" className="bg-black text-red-400">✗ Rejected</option>
+                              <option value="Approved" className="bg-black text-green-400">âœ“ Approved</option>
+                              <option value="Pending" className="bg-black text-amber-400">â³ Pending</option>
+                              <option value="Rejected" className="bg-black text-red-400">âœ— Rejected</option>
                             </select>
                           </td>
                           <td className="py-3 px-4 text-center whitespace-nowrap font-mono font-bold">
@@ -721,7 +724,7 @@ export default function AdminPortalPage() {
             <h2 className="text-xl font-black text-white">Contest Parameters & Security</h2>
             {settingsSaved && (
               <div className="bg-green-950/80 border border-green-800 text-green-300 p-3 rounded-xl text-xs font-bold">
-                ✓ Settings & PIN saved!
+                âœ“ Settings & PIN saved!
               </div>
             )}
             <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
@@ -997,3 +1000,4 @@ export default function AdminPortalPage() {
     </div>
   );
 }
+

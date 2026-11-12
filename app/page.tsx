@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -348,13 +348,7 @@ export default function HomePage() {
               <span>Candidate Desk</span>
             </Link>
 
-            <Link
-              href="/admin"
-              className="px-2.5 py-1.5 rounded-lg text-neutral-500 hover:text-red-400 transition flex items-center gap-1"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Admin</span>
-            </Link>
+            
 
             <Link
               href="/register"
@@ -454,14 +448,7 @@ export default function HomePage() {
               <span>Candidate Desk (Login)</span>
             </Link>
 
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-neutral-500 hover:text-white"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Admin Portal Access</span>
-            </Link>
+            
           </div>
         )}
       </header>
@@ -474,7 +461,7 @@ export default function HomePage() {
             <div className="lg:col-span-7 text-left space-y-6">
               <div className="inline-flex items-center gap-2 bg-red-950/80 border border-red-800/80 text-red-400 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-red-950/40">
                 <Sparkles className="w-3.5 h-3.5 text-red-400" />
-                <span>Annual Nationwide Academic Competition • Session 2026-2027</span>
+                <span>Annual Nationwide Academic Competition â€¢ Session 2026-2027</span>
               </div>
 
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
@@ -773,7 +760,7 @@ export default function HomePage() {
                 <ul className="space-y-3">
                   {currentDiscipline.primaryPoints.map((pt, i) => (
                     <li key={i} className="text-xs text-neutral-400 flex items-start gap-2.5 leading-relaxed">
-                      <span className="text-red-500 font-black mt-0.5">•</span>
+                      <span className="text-red-500 font-black mt-0.5">â€¢</span>
                       <span>{pt}</span>
                     </li>
                   ))}
@@ -795,7 +782,7 @@ export default function HomePage() {
                 <ul className="space-y-3">
                   {currentDiscipline.secondaryPoints.map((pt, i) => (
                     <li key={i} className="text-xs text-neutral-400 flex items-start gap-2.5 leading-relaxed">
-                      <span className="text-amber-500 font-black mt-0.5">•</span>
+                      <span className="text-amber-500 font-black mt-0.5">â€¢</span>
                       <span>{pt}</span>
                     </li>
                   ))}
@@ -893,7 +880,7 @@ export default function HomePage() {
               <div className="space-y-2 pt-2 text-[11px] text-neutral-400">
                 <div className="flex items-center gap-2.5">
                   <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                  <span>Central Examination Directorate • Karachi, Sindh, Pakistan</span>
+                  <span>Central Examination Directorate â€¢ Karachi, Sindh, Pakistan</span>
                 </div>
               </div>
             </div>
@@ -931,7 +918,7 @@ export default function HomePage() {
 
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-500">
             <div>
-              © 2026-2027 Mindmory Educational Assessments. All rights reserved. Registered under National Academic Contest Standards.
+              Â© 2026-2027 Mindmory Educational Assessments. All rights reserved. Registered under National Academic Contest Standards.
             </div>
             <div className="flex items-center gap-6">
               <Link href="/admin" className="text-neutral-600 hover:text-red-400 flex items-center gap-1 transition">
@@ -1135,3 +1122,4 @@ export default function HomePage() {
     </div>
   );
 }
+
