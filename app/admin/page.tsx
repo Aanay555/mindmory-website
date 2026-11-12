@@ -114,6 +114,7 @@ const defaultDisciplines = [
 
 export default function AdminPortalPage() {
     const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const [activeTab, setActiveTab] = useState<"students" | "syllabus" | "settings">("students");
@@ -183,11 +184,22 @@ export default function AdminPortalPage() {
     loadMergedStudents();
   }, []);
 
-  const loadMergedStudents = () => {
+  const loadMergedStudents = async () => {
+    setIsRefreshing(true);
     try {
       const base100 = getInitial100();
       let mainStored: any[] = [];
       let customRegistered: any[] = [];
+      let apiStudents: any[] = [];
+
+      try {
+        const res = await fetch("/api/admin/students", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) apiStudents = data;
+          else if (Array.isArray(data?.students)) apiStudents = data.students;
+        }
+      } catch {}
 
       const s1 = localStorage.getItem("mindmory_students");
       if (s1) {
@@ -202,31 +214,24 @@ export default function AdminPortalPage() {
       const studentsMap = new Map<string, any>();
       base100.forEach((st) => studentsMap.set(st.rollNo.toUpperCase(), st));
 
-      if (Array.isArray(mainStored)) {
-        mainStored.forEach((st) => {
-          if (st.rollNo) {
-            const current = studentsMap.get(st.rollNo.toUpperCase()) || {};
-            studentsMap.set(st.rollNo.toUpperCase(), { 
-              ...current, 
-              ...st, 
-              payment_status: st.payment_status || current.payment_status || "Pending" 
-            });
-          }
-        });
-      }
-
-      if (Array.isArray(customRegistered)) {
-        customRegistered.forEach((st) => {
-          if (st.rollNo) {
-            const current = studentsMap.get(st.rollNo.toUpperCase()) || {};
-            studentsMap.set(st.rollNo.toUpperCase(), { 
-              ...current, 
-              ...st, 
-              payment_status: st.payment_status || current.payment_status || "Pending" 
-            });
-          }
-        });
-      }
+      [mainStored, customRegistered, apiStudents].forEach((list) => {
+        if (Array.isArray(list)) {
+          list.forEach((st) => {
+            const rNo = st.rollNo || st.roll_no;
+            if (rNo) {
+              const key = String(rNo).toUpperCase();
+              const current = studentsMap.get(key) || {};
+              studentsMap.set(key, {
+                ...current,
+                ...st,
+                rollNo: rNo,
+                fatherName: st.fatherName || st.father_name || current.fatherName || "",
+                payment_status: st.payment_status || current.payment_status || "Pending"
+              });
+            }
+          });
+        }
+      });
 
       const mergedList = Array.from(studentsMap.values());
       mergedList.sort((a, b) => {
@@ -237,7 +242,9 @@ export default function AdminPortalPage() {
 
       setStudents(mergedList);
       localStorage.setItem("mindmory_students", JSON.stringify(mergedList));
-    } catch {}
+    } catch {} finally {
+      setTimeout(() => setIsRefreshing(false), 400);
+    }
   };
 
   const handleUpdateFeeStatus = (rollNo: string, newStatus: string) => {
@@ -454,7 +461,7 @@ export default function AdminPortalPage() {
               onClick={loadMergedStudents}
               className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition text-neutral-300 cursor-pointer"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-red-500" />
+              <RefreshCw className={`w-3.5 h-3.5 text-red-500 ${isRefreshing ? "animate-spin" : ""}`} />
               <span>Refresh Records</span>
             </button>
           </div>
@@ -1048,4 +1055,5 @@ export default function AdminPortalPage() {
     </div>
   );
 }
+
 
