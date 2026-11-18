@@ -1,19 +1,20 @@
 ﻿"use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Search, 
-  Printer, 
-  CheckCircle2, 
+import {
+  ArrowLeft,
+  Search,
+  Printer,
+  CheckCircle2,
   XCircle,
-  Clock, 
-  Award, 
   RotateCcw,
   Laptop,
   Trophy,
-  Check
+  Check,
+  FileUp,
+  ShieldAlert,
+  Timer,
 } from "lucide-react";
 
 interface Question {
@@ -34,7 +35,7 @@ interface ClassPaper {
 }
 
 const allPapersData: ClassPaper[] = [
-  // GRADE 1 (Complete 30 Questions)
+  // GRADE 1 (30 Default Questions)
   {
     gradeId: "grade-1",
     gradeTitle: "Grade 1",
@@ -62,7 +63,7 @@ const allPapersData: ClassPaper[] = [
       { id: 18, part: "Part 4: School & Study", q: "Which day is the first day of the week?", options: ["a) Monday", "b) Sunday", "c) Friday"], correct: "b" },
       { id: 19, part: "Part 4: School & Study", q: "Who teaches us in class?", options: ["a) Doctor", "b) Teacher", "c) Farmer"], correct: "b" },
       { id: 20, part: "Part 4: School & Study", q: "We keep our books in a?", options: ["a) Bag", "b) Fridge", "c) Box"], correct: "a" },
-      { id: 21, part: "Part 5: Islam & Values", q: "Who is our last Prophet?", options: ["a) Hazrat Isa A.S", "b) Hazrat Muhammad ï·º", "c) Hazrat Musa A.S"], correct: "b" },
+      { id: 21, part: "Part 5: Islam & Values", q: "Who is our last Prophet?", options: ["a) Hazrat Isa (A.S)", "b) Hazrat Muhammad (PBUH)", "c) Hazrat Musa (A.S)"], correct: "b" },
       { id: 22, part: "Part 5: Islam & Values", q: "How many times do we pray daily?", options: ["a) 3", "b) 5", "c) 7"], correct: "b" },
       { id: 23, part: "Part 5: Islam & Values", q: "What do we say before eating?", options: ["a) Alhamdulillah", "b) Bismillah", "c) Mashallah"], correct: "b" },
       { id: 24, part: "Part 5: Islam & Values", q: "Our Holy Book is?", options: ["a) Bible", "b) Torah", "c) Quran"], correct: "c" },
@@ -71,11 +72,11 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Part 6: Environment & General", q: "Which is used to clean hands?", options: ["a) Soap", "b) Stone", "c) Paper"], correct: "a" },
       { id: 28, part: "Part 6: Environment & General", q: "What comes after day?", options: ["a) Morning", "b) Night", "c) Evening"], correct: "b" },
       { id: 29, part: "Part 6: Environment & General", q: "Which month has 31 days?", options: ["a) February", "b) January", "c) April"], correct: "b" },
-      { id: 30, part: "Part 6: Environment & General", q: "We should keep our surroundings?", options: ["a) Dirty", "b) Clean", "c) Noisy"], correct: "b" }
-    ]
+      { id: 30, part: "Part 6: Environment & General", q: "We should keep our surroundings?", options: ["a) Dirty", "b) Clean", "c) Noisy"], correct: "b" },
+    ],
   },
 
-  // GRADE 2 (Complete 30 Questions)
+  // GRADE 2 (30 Default Questions)
   {
     gradeId: "grade-2",
     gradeTitle: "Grade 2",
@@ -112,16 +113,16 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Part 6: General & GK", q: "Which instrument do we use to measure time?", options: ["a) Scale", "b) Clock", "c) Thermometer"], correct: "b" },
       { id: 28, part: "Part 6: General & GK", q: "Computer screen is called?", options: ["a) Monitor", "b) Keyboard", "c) Mouse"], correct: "a" },
       { id: 29, part: "Part 6: General & GK", q: "Which is the fastest land animal?", options: ["a) Horse", "b) Cheetah", "c) Deer"], correct: "b" },
-      { id: 30, part: "Part 6: General & GK", q: "We celebrate 14th August as?", options: ["a) Labour Day", "b) Independence Day", "c) Defence Day"], correct: "b" }
-    ]
+      { id: 30, part: "Part 6: General & GK", q: "We celebrate 14th August as?", options: ["a) Labour Day", "b) Independence Day", "c) Defence Day"], correct: "b" },
+    ],
   },
 
-  // GRADE 3 (30 Questions)
+  // GRADE 3 (30 Default Questions)
   {
     gradeId: "grade-3",
     gradeTitle: "Grade 3",
     subject: "General Knowledge",
-    duration: "45 minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Part 1: Pakistan & World", q: "What is the national bird of Pakistan?", options: ["a) Peacock", "b) Chukar", "c) Parrot"], correct: "b" },
@@ -129,7 +130,7 @@ const allPapersData: ClassPaper[] = [
       { id: 3, part: "Part 1: Pakistan & World", q: "Who is called the 'Father of the Nation'?", options: ["a) Allama Iqbal", "b) Quaid-e-Azam", "c) Liaquat Ali Khan"], correct: "b" },
       { id: 4, part: "Part 1: Pakistan & World", q: "How many continents are there in the world?", options: ["a) 5", "b) 6", "c) 7"], correct: "c" },
       { id: 5, part: "Part 1: Pakistan & World", q: "Currency of Pakistan is?", options: ["a) Dollar", "b) Rupee", "c) Riyal"], correct: "b" },
-      { id: 6, part: "Part 2: Science", q: "Water boils at?", options: ["a) 50Â°C", "b) 100Â°C", "c) 0Â°C"], correct: "b" },
+      { id: 6, part: "Part 2: Science", q: "Water boils at?", options: ["a) 50°C", "b) 100°C", "c) 0°C"], correct: "b" },
       { id: 7, part: "Part 2: Science", q: "The process by which plants make food is called?", options: ["a) Respiration", "b) Photosynthesis", "c) Digestion"], correct: "b" },
       { id: 8, part: "Part 2: Science", q: "Human body has how many bones?", options: ["a) 206", "b) 300", "c) 150"], correct: "a" },
       { id: 9, part: "Part 2: Science", q: "Which planet is known as the 'Red Planet'?", options: ["a) Earth", "b) Mars", "c) Jupiter"], correct: "b" },
@@ -153,16 +154,16 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Part 6: Computer, Math & General", q: "Part of computer used to type is?", options: ["a) Mouse", "b) Keyboard", "c) Monitor"], correct: "b" },
       { id: 28, part: "Part 6: Computer, Math & General", q: "Sun rises from the?", options: ["a) West", "b) East", "c) North"], correct: "b" },
       { id: 29, part: "Part 6: Computer, Math & General", q: "Which is the longest river in Pakistan?", options: ["a) Chenab", "b) Ravi", "c) Indus"], correct: "c" },
-      { id: 30, part: "Part 6: Computer, Math & General", q: "We should save electricity by?", options: ["a) Keeping lights on", "b) Switching off when not needed", "c) Using AC all day"], correct: "b" }
-    ]
+      { id: 30, part: "Part 6: Computer, Math & General", q: "We should save electricity by?", options: ["a) Keeping lights on", "b) Switching off when not needed", "c) Using AC all day"], correct: "b" },
+    ],
   },
 
-  // GRADE 4 (30 Questions)
+  // GRADE 4 (30 Default Questions)
   {
     gradeId: "grade-4",
     gradeTitle: "Grade 4",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "The capital of Pakistan is?", options: ["a) Karachi", "b) Lahore", "c) Islamabad"], correct: "c" },
@@ -183,7 +184,7 @@ const allPapersData: ClassPaper[] = [
       { id: 16, part: "World & Geography", q: "The longest river in the world is?", options: ["a) Indus", "b) Nile", "c) Amazon"], correct: "b" },
       { id: 17, part: "World & Geography", q: "Taj Mahal is located in?", options: ["a) Pakistan", "b) India", "c) Afghanistan"], correct: "b" },
       { id: 18, part: "Science & Technology", q: "The process of making food by plants is called?", options: ["a) Respiration", "b) Photosynthesis", "c) Digestion"], correct: "b" },
-      { id: 19, part: "Science & Technology", q: "Water boils at?", options: ["a) 50Â°C", "b) 100Â°C", "c) 0Â°C"], correct: "b" },
+      { id: 19, part: "Science & Technology", q: "Water boils at?", options: ["a) 50°C", "b) 100°C", "c) 0°C"], correct: "b" },
       { id: 20, part: "Science & Technology", q: "Human body has how many bones?", options: ["a) 206", "b) 250", "c) 300"], correct: "a" },
       { id: 21, part: "Science & Technology", q: "Which organ purifies our blood?", options: ["a) Heart", "b) Lungs", "c) Kidney"], correct: "c" },
       { id: 22, part: "Science & Technology", q: "Which vitamin do we get from sunlight?", options: ["a) Vitamin A", "b) Vitamin C", "c) Vitamin D"], correct: "c" },
@@ -194,16 +195,16 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Islamiat & Ethics", q: "First Kalma is called?", options: ["a) Kalma-e-Shahadat", "b) Kalma-e-Tayyaba", "c) Kalma-e-Tamjeed"], correct: "b" },
       { id: 28, part: "Islamiat & Ethics", q: "We should always speak?", options: ["a) Truth", "b) Lie", "c) Loud"], correct: "a" },
       { id: 29, part: "Islamiat & Ethics", q: "Helping others is?", options: ["a) Bad habit", "b) Good habit", "c) Waste of time"], correct: "b" },
-      { id: 30, part: "Islamiat & Ethics", q: "The national sport of Pakistan is?", options: ["a) Cricket", "b) Hockey", "c) Football"], correct: "b" }
-    ]
+      { id: 30, part: "Islamiat & Ethics", q: "The national sport of Pakistan is?", options: ["a) Cricket", "b) Hockey", "c) Football"], correct: "b" },
+    ],
   },
 
-  // GRADE 5 (30 Questions)
+  // GRADE 5 (30 Default Questions)
   {
     gradeId: "grade-5",
     gradeTitle: "Grade 5",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "Who is called 'Poet of the East'?", options: ["a) Faiz Ahmed Faiz", "b) Allama Iqbal", "c) Josh Malihabadi"], correct: "b" },
@@ -230,21 +231,21 @@ const allPapersData: ClassPaper[] = [
       { id: 22, part: "Science & Technology", q: "WWW stands for?", options: ["a) World Wide Web", "b) World Wide Work", "c) World Web Wire"], correct: "a" },
       { id: 23, part: "Science & Technology", q: "Device used to measure temperature is?", options: ["a) Barometer", "b) Thermometer", "c) Hygrometer"], correct: "b" },
       { id: 24, part: "Islamiat & General Ethics", q: "How many Surahs are there in the Holy Quran?", options: ["a) 110", "b) 114", "c) 120"], correct: "b" },
-      { id: 25, part: "Islamiat & General Ethics", q: "The last Prophet of Allah is?", options: ["a) Hazrat Musa A.S", "b) Hazrat Isa A.S", "c) Hazrat Muhammad ï·º"], correct: "c" },
-      { id: 26, part: "Islamiat & General Ethics", q: "Fasting in Ramadan is the _ pillar of Islam.", options: ["a) 3rd", "b) 4th", "c) 5th"], correct: "b" },
+      { id: 25, part: "Islamiat & General Ethics", q: "The last Prophet of Allah is?", options: ["a) Hazrat Musa (A.S)", "b) Hazrat Isa (A.S)", "c) Hazrat Muhammad (PBUH)"], correct: "c" },
+      { id: 26, part: "Islamiat & General Ethics", q: "Fasting in Ramadan is the ___ pillar of Islam.", options: ["a) 3rd", "b) 4th", "c) 5th"], correct: "b" },
       { id: 27, part: "Islamiat & General Ethics", q: "We should respect our?", options: ["a) Elders only", "b) Teachers only", "c) Elders and Teachers"], correct: "c" },
       { id: 28, part: "Sports & Famous Personalities", q: "The national game of Pakistan is?", options: ["a) Cricket", "b) Hockey", "c) Squash"], correct: "b" },
       { id: 29, part: "Sports & Famous Personalities", q: "Who was the first woman Prime Minister of Pakistan?", options: ["a) Fatima Jinnah", "b) Benazir Bhutto", "c) Maryam Nawaz"], correct: "b" },
-      { id: 30, part: "Sports & Famous Personalities", q: "Who invented the telephone?", options: ["a) Thomas Edison", "b) Alexander Graham Bell", "c) James Watt"], correct: "b" }
-    ]
+      { id: 30, part: "Sports & Famous Personalities", q: "Who invented the telephone?", options: ["a) Thomas Edison", "b) Alexander Graham Bell", "c) James Watt"], correct: "b" },
+    ],
   },
 
-  // GRADE 6 (30 Questions)
+  // GRADE 6 (30 Default Questions)
   {
     gradeId: "grade-6",
     gradeTitle: "Grade 6",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "The Objectives Resolution was passed in?", options: ["a) 1947", "b) 1949", "c) 1956"], correct: "b" },
@@ -268,7 +269,7 @@ const allPapersData: ClassPaper[] = [
       { id: 19, part: "Science", q: "Sound travels fastest in?", options: ["a) Air", "b) Water", "c) Solid"], correct: "c" },
       { id: 20, part: "Science", q: "The force that pulls objects towards earth is?", options: ["a) Magnetic Force", "b) Gravitational Force", "c) Electric Force"], correct: "b" },
       { id: 21, part: "Science", q: "Anemia is caused due to deficiency of?", options: ["a) Iron", "b) Calcium", "c) Vitamin C"], correct: "a" },
-      { id: 22, part: "Science", q: "Solar energy is a _ source of energy.", options: ["a) Non-renewable", "b) Renewable", "c) Both"], correct: "b" },
+      { id: 22, part: "Science", q: "Solar energy is a ___ source of energy.", options: ["a) Non-renewable", "b) Renewable", "c) Both"], correct: "b" },
       { id: 23, part: "Islamiat & Ethics", q: "How many Ashra are there in Ramadan?", options: ["a) 2", "b) 3", "c) 4"], correct: "b" },
       { id: 24, part: "Islamiat & Ethics", q: "The battle of Badr was fought in?", options: ["a) 1 Hijri", "b) 2 Hijri", "c) 3 Hijri"], correct: "b" },
       { id: 25, part: "Islamiat & Ethics", q: "Zakat is obligatory on Muslims who have wealth above?", options: ["a) Nisab", "b) Ushr", "c) Khums"], correct: "a" },
@@ -276,16 +277,16 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Computer & Sports", q: "RAM stands for?", options: ["a) Random Access Memory", "b) Read Access Memory", "c) Rapid Access Memory"], correct: "a" },
       { id: 28, part: "Computer & Sports", q: "The Olympic Games are held after every?", options: ["a) 2 years", "b) 3 years", "c) 4 years"], correct: "c" },
       { id: 29, part: "Computer & Sports", q: "Who is known as 'Father of Computer'?", options: ["a) Charles Babbage", "b) Alan Turing", "c) Bill Gates"], correct: "a" },
-      { id: 30, part: "Computer & Sports", q: "The book 'Harry Potter' was written by?", options: ["a) J.K. Rowling", "b) William Shakespeare", "c) Agatha Christie"], correct: "a" }
-    ]
+      { id: 30, part: "Computer & Sports", q: "The book 'Harry Potter' was written by?", options: ["a) J.K. Rowling", "b) William Shakespeare", "c) Agatha Christie"], correct: "a" },
+    ],
   },
 
-  // GRADE 7 (30 Questions)
+  // GRADE 7 (30 Default Questions)
   {
     gradeId: "grade-7",
     gradeTitle: "Grade 7",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "The 1973 Constitution of Pakistan was enforced on?", options: ["a) 14th August 1973", "b) 23rd March 1973", "c) 12th April 1973"], correct: "b" },
@@ -311,22 +312,22 @@ const allPapersData: ClassPaper[] = [
       { id: 21, part: "Science", q: "Vaccination was discovered by?", options: ["a) Louis Pasteur", "b) Edward Jenner", "c) Alexander Fleming"], correct: "b" },
       { id: 22, part: "Islamiat & Ethics", q: "How many times is daily prayer offered in Islam?", options: ["a) 3", "b) 5", "c) 7"], correct: "b" },
       { id: 23, part: "Islamiat & Ethics", q: "The first battle in Islamic history was?", options: ["a) Battle of Uhud", "b) Battle of Badr", "c) Battle of Khandaq"], correct: "b" },
-      { id: 24, part: "Islamiat & Ethics", q: "The companion known as 'Sword of Allah' was?", options: ["a) Hazrat Ali R.A", "b) Hazrat Umar R.A", "c) Hazrat Khalid bin Waleed R.A"], correct: "c" },
+      { id: 24, part: "Islamiat & Ethics", q: "The companion known as 'Sword of Allah' was?", options: ["a) Hazrat Ali (R.A)", "b) Hazrat Umar (R.A)", "c) Hazrat Khalid bin Waleed (R.A)"], correct: "c" },
       { id: 25, part: "Islamiat & Ethics", q: "Truthfulness is emphasized in which Surah?", options: ["a) Surah Ikhlas", "b) Surah Asr", "c) Surah Fatiha"], correct: "b" },
       { id: 26, part: "Computer & Literature", q: "HTML stands for?", options: ["a) Hyper Text Markup Language", "b) High Tech Modern Language", "c) Hyper Transfer Media Link"], correct: "a" },
       { id: 27, part: "Computer & Literature", q: "Who wrote 'Romeo and Juliet'?", options: ["a) Charles Dickens", "b) William Shakespeare", "c) Jane Austen"], correct: "b" },
       { id: 28, part: "Computer & Literature", q: "The FIFA World Cup is held after every?", options: ["a) 2 years", "b) 4 years", "c) 6 years"], correct: "b" },
       { id: 29, part: "Computer & Literature", q: "The currency of Saudi Arabia is?", options: ["a) Dinar", "b) Dirham", "c) Riyal"], correct: "c" },
-      { id: 30, part: "Computer & Literature", q: "Which instrument is used to measure air pressure?", options: ["a) Thermometer", "b) Barometer", "c) Anemometer"], correct: "b" }
-    ]
+      { id: 30, part: "Computer & Literature", q: "Which instrument is used to measure air pressure?", options: ["a) Thermometer", "b) Barometer", "c) Anemometer"], correct: "b" },
+    ],
   },
 
-  // GRADE 8 (30 Questions)
+  // GRADE 8 (30 Default Questions)
   {
     gradeId: "grade-8",
     gradeTitle: "Grade 8",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "The first capital of Pakistan was?", options: ["a) Lahore", "b) Karachi", "c) Islamabad"], correct: "b" },
@@ -347,7 +348,7 @@ const allPapersData: ClassPaper[] = [
       { id: 16, part: "Science", q: "Acid rain is caused by?", options: ["a) CO2 and CO", "b) SO2 and NO2", "c) O2 and N2"], correct: "b" },
       { id: 17, part: "Science", q: "The human skeleton has how many bones?", options: ["a) 206", "b) 208", "c) 210"], correct: "a" },
       { id: 18, part: "Science", q: "Which gas is used in photosynthesis?", options: ["a) Oxygen", "b) Carbon Dioxide", "c) Nitrogen"], correct: "b" },
-      { id: 19, part: "Science", q: "The boiling point of water at sea level is?", options: ["a) 90Â°C", "b) 100Â°C", "c) 110Â°C"], correct: "b" },
+      { id: 19, part: "Science", q: "The boiling point of water at sea level is?", options: ["a) 90°C", "b) 100°C", "c) 110°C"], correct: "b" },
       { id: 20, part: "Science", q: "An eclipse occurs when?", options: ["a) Earth comes between Sun and Moon", "b) Moon comes between Sun and Earth", "c) Both a and b"], correct: "c" },
       { id: 21, part: "Science", q: "The study of fossils is called?", options: ["a) Paleontology", "b) Archaeology", "c) Anthropology"], correct: "a" },
       { id: 22, part: "Islamiat & Ethics", q: "The last book revealed by Allah is?", options: ["a) Taurat", "b) Injeel", "c) Quran"], correct: "c" },
@@ -358,16 +359,16 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Computer & General", q: "Who wrote 'Pakistan: A Dream Gone Sour'?", options: ["a) Fatima Bhutto", "b) Javed Jabbar", "c) Noam Chomsky"], correct: "a" },
       { id: 28, part: "Computer & General", q: "The Olympic motto is?", options: ["a) Faster, Higher, Stronger", "b) Unity in Diversity", "c) Play to Win"], correct: "a" },
       { id: 29, part: "Computer & General", q: "Bluetooth technology was named after a king of?", options: ["a) Sweden", "b) Denmark", "c) Norway"], correct: "b" },
-      { id: 30, part: "Computer & General", q: "World Literacy Day is observed on?", options: ["a) 8th September", "b) 5th October", "c) 16th November"], correct: "a" }
-    ]
+      { id: 30, part: "Computer & General", q: "World Literacy Day is observed on?", options: ["a) 8th September", "b) 5th October", "c) 16th November"], correct: "a" },
+    ],
   },
 
-  // GRADE 9 (30 Questions)
+  // GRADE 9 (30 Default Questions)
   {
     gradeId: "grade-9",
     gradeTitle: "Grade 9",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "The Objectives Resolution was made part of 1973 Constitution as?", options: ["a) Preamble", "b) Schedule", "c) Article 2A"], correct: "a" },
@@ -391,24 +392,24 @@ const allPapersData: ClassPaper[] = [
       { id: 19, part: "Science", q: "The unit of electric current is?", options: ["a) Volt", "b) Ampere", "c) Ohm"], correct: "b" },
       { id: 20, part: "Science", q: "DNA stands for?", options: ["a) Deoxyribo Nucleic Acid", "b) Di Nucleic Acid", "c) Dual Nitrogen Acid"], correct: "a" },
       { id: 21, part: "Science", q: "The hottest planet of solar system is?", options: ["a) Mercury", "b) Venus", "c) Mars"], correct: "b" },
-      { id: 22, part: "Islamiat & Ethics", q: "How many Ghazwat were fought by Holy Prophet ï·º?", options: ["a) 23", "b) 27", "c) 30"], correct: "b" },
-      { id: 23, part: "Islamiat & Ethics", q: "The first woman to accept Islam was?", options: ["a) Hazrat Aisha R.A", "b) Hazrat Khadija R.A", "c) Hazrat Fatima R.A"], correct: "b" },
+      { id: 22, part: "Islamiat & Ethics", q: "How many Ghazwat were fought by Holy Prophet (PBUH)?", options: ["a) 23", "b) 27", "c) 30"], correct: "b" },
+      { id: 23, part: "Islamiat & Ethics", q: "The first woman to accept Islam was?", options: ["a) Hazrat Aisha (R.A)", "b) Hazrat Khadija (R.A)", "c) Hazrat Fatima (R.A)"], correct: "b" },
       { id: 24, part: "Islamiat & Ethics", q: "The night of 27th Ramadan is called?", options: ["a) Shab-e-Barat", "b) Shab-e-Qadr", "c) Shab-e-Miraj"], correct: "b" },
       { id: 25, part: "Islamiat & Ethics", q: "The concept of 'Ummah' in Islam means?", options: ["a) Nation", "b) Community", "c) Mosque"], correct: "b" },
       { id: 26, part: "Computer & General", q: "1 Gigabyte equals to?", options: ["a) 1000 MB", "b) 1024 MB", "c) 2048 MB"], correct: "b" },
       { id: 27, part: "Computer & General", q: "Who is the author of 'Alchemist'?", options: ["a) Paulo Coelho", "b) Dan Brown", "c) J.K Rowling"], correct: "a" },
       { id: 28, part: "Computer & General", q: "The Nobel Prize was established by?", options: ["a) Alfred Nobel", "b) Marie Curie", "c) Albert Einstein"], correct: "a" },
       { id: 29, part: "Computer & General", q: "The largest producer of oil in the world is?", options: ["a) Saudi Arabia", "b) USA", "c) Russia"], correct: "b" },
-      { id: 30, part: "Computer & General", q: "The term 'Grand Slam' is related to?", options: ["a) Cricket", "b) Tennis", "c) Golf"], correct: "b" }
-    ]
+      { id: 30, part: "Computer & General", q: "The term 'Grand Slam' is related to?", options: ["a) Cricket", "b) Tennis", "c) Golf"], correct: "b" },
+    ],
   },
 
-  // GRADE 10 / O LEVELS (30 Questions)
+  // GRADE 10 / O LEVELS (30 Default Questions)
   {
     gradeId: "grade-10",
     gradeTitle: "Grade 10 / O Levels",
     subject: "General Knowledge",
-    duration: "30 Minutes",
+    duration: "15 minutes",
     totalMarks: 30,
     questions: [
       { id: 1, part: "Pakistan Studies", q: "The 1956 Constitution of Pakistan was?", options: ["a) Parliamentary", "b) Presidential", "c) Unitary"], correct: "a" },
@@ -440,29 +441,131 @@ const allPapersData: ClassPaper[] = [
       { id: 27, part: "Computer & General", q: "Who painted 'Mona Lisa'?", options: ["a) Vincent Van Gogh", "b) Leonardo da Vinci", "c) Pablo Picasso"], correct: "b" },
       { id: 28, part: "Computer & General", q: "The Cold War was between?", options: ["a) USA and USSR", "b) USA and China", "c) UK and France"], correct: "a" },
       { id: 29, part: "Computer & General", q: "Which country won ICC Cricket World Cup 2023?", options: ["a) India", "b) Australia", "c) England"], correct: "b" },
-      { id: 30, part: "Computer & General", q: "'Artificial Intelligence' was coined by?", options: ["a) Alan Turing", "b) John McCarthy", "c) Charles Babbage"], correct: "b" }
-    ]
-  }
+      { id: 30, part: "Computer & General", q: "'Artificial Intelligence' was coined by?", options: ["a) Alan Turing", "b) John McCarthy", "c) Charles Babbage"], correct: "b" },
+    ],
+  },
 ];
 
 export default function PaperPatternPage() {
+  const [papersList, setPapersList] = useState<ClassPaper[]>(allPapersData);
   const [selectedGrade, setSelectedGrade] = useState("grade-1");
   const [searchQuery, setSearchQuery] = useState("");
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: string }>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const currentPaper = allPapersData.find((p) => p.gradeId === selectedGrade) || allPapersData[0];
+  // ANTI-CHEATING TIMED EXAM LOCK STATE
+  const [timedModeActive, setTimedModeActive] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(15 * 60);
+  const [tabWarnings, setTabWarnings] = useState(0);
+  const [cheatAlert, setCheatAlert] = useState("");
+
+  // Load Admin's Uploaded 100 MCQs if available
+  useEffect(() => {
+    try {
+      const savedCustom = localStorage.getItem("mindmory_custom_papers");
+      if (savedCustom) {
+        const parsedMap = JSON.parse(savedCustom);
+        if (parsedMap && typeof parsedMap === "object") {
+          const merged = allPapersData.map((basePaper) => {
+            const custom = parsedMap[basePaper.gradeId];
+            if (custom && Array.isArray(custom.questions) && custom.questions.length > 0) {
+              return {
+                ...basePaper,
+                subject: custom.subject || basePaper.subject,
+                duration: custom.duration || basePaper.duration,
+                totalMarks: custom.questions.length,
+                questions: custom.questions,
+              };
+            }
+            return basePaper;
+          });
+          setPapersList(merged);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const currentPaper = papersList.find((p) => p.gradeId === selectedGrade) || papersList[0];
+
+  const finishTimedExam = useCallback((reason?: string) => {
+    setTimedModeActive(false);
+    setIsSubmitted(true);
+    if (reason) setCheatAlert(reason);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Countdown Timer Effect
+  useEffect(() => {
+    if (!timedModeActive || isSubmitted) return;
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          finishTimedExam("Time Expired! Your exam has been automatically submitted.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timedModeActive, isSubmitted, finishTimedExam]);
+
+  // Anti-Cheating Tab-Switch / Visibility Lock
+  useEffect(() => {
+    if (!timedModeActive || isSubmitted) return;
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setTabWarnings((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+            finishTimedExam("Anti-Cheat Lock: Exam auto-submitted after 3 tab switches.");
+          } else {
+            setCheatAlert(`Warning ${next}/3: Switching tabs or windows during the exam is prohibited!`);
+          }
+          return next;
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [timedModeActive, isSubmitted, finishTimedExam]);
+
+  const startTimedExam = () => {
+    setUserAnswers({});
+    setIsSubmitted(false);
+    setTabWarnings(0);
+    setCheatAlert("");
+    setSecondsLeft(15 * 60);
+    setTimedModeActive(true);
+    try {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+  };
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const rem = secs % 60;
+    return `${String(mins).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
+  };
 
   const handleSelectOption = (qId: number, optionLetter: string) => {
+    if (isSubmitted) return;
     setUserAnswers((prev) => ({
       ...prev,
-      [qId]: optionLetter
+      [qId]: optionLetter,
     }));
   };
 
   const handleReset = () => {
     setUserAnswers({});
     setIsSubmitted(false);
+    setTimedModeActive(false);
+    setTabWarnings(0);
+    setCheatAlert("");
   };
 
   const score = Object.entries(userAnswers).reduce((acc, [qId, selectedOpt]) => {
@@ -485,19 +588,31 @@ export default function PaperPatternPage() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-neutral-100 font-sans selection:bg-red-600 selection:text-white pt-8 pb-24 px-4 sm:px-6 lg:px-8">
+    <div
+      onCopy={(e) => {
+        if (timedModeActive) e.preventDefault();
+      }}
+      onContextMenu={(e) => {
+        if (timedModeActive) e.preventDefault();
+      }}
+      className={`min-h-screen bg-black text-neutral-100 font-sans selection:bg-red-600 selection:text-white pt-8 pb-24 px-4 sm:px-6 lg:px-8 ${
+        timedModeActive ? "select-none" : ""
+      }`}
+    >
       <div className="max-w-5xl mx-auto space-y-6">
-        
         {/* TOP BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-900">
           <div>
-            <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-red-500 mb-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-red-500 mb-2"
+            >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Home</span>
             </Link>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono text-red-500 font-bold uppercase tracking-widest bg-red-950/80 border border-red-900/60 px-2 py-0.5 rounded">
-                MINDMORY MODEL PAPER & PRACTICE TERMINAL
+                MINDMORY MODEL PAPER &amp; PRACTICE TERMINAL
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
@@ -506,45 +621,71 @@ export default function PaperPatternPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {!timedModeActive ? (
+              <button
+                type="button"
+                onClick={startTimedExam}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-lg cursor-pointer"
+              >
+                <Timer className="w-3.5 h-3.5" />
+                <span>Start 15-Min Anti-Cheat Timed Test</span>
+              </button>
+            ) : (
+              <div className="px-4 py-2 bg-red-950 border border-red-600 text-white text-xs font-mono font-black rounded-xl flex items-center gap-2 animate-pulse">
+                <Timer className="w-4 h-4 text-red-400" />
+                <span>TIME LEFT: {formatTime(secondsLeft)}</span>
+              </div>
+            )}
+
             <Link
-              href="/student-login"
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-lg shadow-red-600/30"
+              href="/admin"
+              className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-amber-400 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
             >
-              <Laptop className="w-3.5 h-3.5" />
-              <span>Official Timed Test (Candidate Portal) â†’</span>
+              <FileUp className="w-3.5 h-3.5" />
+              <span>Upload 100 MCQs (Admin)</span>
             </Link>
 
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-neutral-200 text-xs font-bold rounded-xl flex items-center gap-2 transition cursor-pointer"
+              className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 text-neutral-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print A4 Paper</span>
+              <span>Print A4</span>
             </button>
           </div>
         </div>
 
+        {/* ANTI-CHEAT WARNING BANNER */}
+        {cheatAlert && (
+          <div className="bg-red-950/90 border border-red-600 text-red-200 px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{cheatAlert}</span>
+          </div>
+        )}
+
         {/* 1. CLASS SELECTION TABS */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-          {allPapersData.map((c) => {
+          {papersList.map((c) => {
             const isSelected = selectedGrade === c.gradeId;
 
             return (
               <button
                 key={c.gradeId}
+                disabled={timedModeActive}
                 onClick={() => {
                   setSelectedGrade(c.gradeId);
                   setUserAnswers({});
                   setIsSubmitted(false);
                   setSearchQuery("");
                 }}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 disabled:opacity-50 ${
                   isSelected
                     ? "bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]"
                     : "bg-neutral-950 text-neutral-400 hover:text-white border border-neutral-850 hover:border-neutral-700"
                 }`}
               >
                 <span>{c.gradeTitle}</span>
+                <span className="text-[10px] opacity-75">({c.questions.length})</span>
               </button>
             );
           })}
@@ -565,27 +706,30 @@ export default function PaperPatternPage() {
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
             <div className="flex items-center gap-3 text-xs bg-black px-3.5 py-1.5 rounded-xl border border-neutral-800">
-              <span className="text-neutral-400">Live Practice Score:</span>
-              <span className="font-mono font-black text-green-400 text-sm">
-                {score} / {currentPaper.questions.length}
+              <span className="text-neutral-400">
+                {timedModeActive ? "Attempted:" : "Live Practice Score:"}
               </span>
-              <span className="text-[10px] text-neutral-500">
-                ({attemptedCount} / {currentPaper.questions.length} Attempted)
+              <span className="font-mono font-black text-green-400 text-sm">
+                {timedModeActive
+                  ? `${attemptedCount} / ${currentPaper.questions.length}`
+                  : `${score} / ${currentPaper.questions.length}`}
               </span>
             </div>
 
-            <button
-              onClick={handleReset}
-              className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-neutral-300 flex items-center gap-1.5 cursor-pointer transition"
-              title="Reset practice"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span>Reset</span>
-            </button>
+            {!timedModeActive && (
+              <button
+                onClick={handleReset}
+                className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-neutral-300 flex items-center gap-1.5 cursor-pointer transition"
+                title="Reset practice"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* RESULT SCORECARD SUMMARY (IF USER SUBMITS PRACTICE) */}
+        {/* RESULT SCORECARD SUMMARY */}
         {isSubmitted && (
           <div className="bg-gradient-to-r from-red-950/70 via-neutral-950 to-neutral-950 border border-red-700/80 p-6 rounded-3xl space-y-3 animate-in fade-in duration-300">
             <div className="flex items-center justify-between">
@@ -595,7 +739,7 @@ export default function PaperPatternPage() {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-mono font-bold text-green-400 block">
-                    PRACTICE PAPER EVALUATION COMPLETE
+                    PAPER EVALUATION COMPLETE
                   </span>
                   <h3 className="text-lg font-black text-white">
                     {currentPaper.gradeTitle} Result: {score} out of {currentPaper.questions.length} ({percentage}%)
@@ -611,33 +755,36 @@ export default function PaperPatternPage() {
               </button>
             </div>
             <p className="text-xs text-neutral-300">
-              {percentage >= 80 
-                ? "ðŸŒŸ Outstanding preparation! You are ready for the National Distinction Medal."
+              {percentage >= 80
+                ? "Outstanding preparation! You are ready for the National Distinction Medal."
                 : percentage >= 50
-                ? "ðŸ‘ Good attempt! Review the red incorrect questions below to improve your score."
-                : "ðŸ“š Practice again to build speed and accuracy before official test day."}
+                ? "Good attempt! Review the incorrect answers highlighted in red below to improve your score."
+                : "Practice again to build speed and accuracy before the official examination day."}
             </p>
           </div>
         )}
 
         {/* 3. INTERACTIVE QUESTION PAPER */}
         <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl text-left">
-          
           <div className="border-b border-neutral-850 pb-4 text-center space-y-1">
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider uppercase font-mono">
               MINDMORY SCHOOL COMPETITION
             </h2>
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-neutral-400 pt-1 font-semibold">
               <span className="text-red-400 font-bold">{currentPaper.gradeTitle}</span>
-              <span>â€¢</span>
+              <span>•</span>
               <span className="text-white">{currentPaper.subject}</span>
-              <span>â€¢</span>
+              <span>•</span>
               <span>Time: {currentPaper.duration}</span>
-              <span>â€¢</span>
-              <span>Total Questions: {currentPaper.questions.length} (30 Marks)</span>
+              <span>•</span>
+              <span>
+                Total Questions: {currentPaper.questions.length} ({currentPaper.questions.length} Marks)
+              </span>
             </div>
             <p className="text-[11px] text-amber-400/90 pt-1">
-              Instructions: Click on option (a, b, or c) to check your answer instantly. Sahi answer par Green aur ghalat par Red light hogi.
+              {timedModeActive
+                ? "Exam Lock Active: Answers will be revealed after you submit the test. Do not switch tabs."
+                : "Instructions: Click on option (a, b, or c) to check your answer instantly. Correct answers highlight in Green and incorrect answers highlight in Red."}
             </p>
           </div>
 
@@ -647,15 +794,18 @@ export default function PaperPatternPage() {
                 const selectedOpt = userAnswers[item.id];
                 const isAttempted = selectedOpt !== undefined;
                 const isCorrect = selectedOpt === item.correct;
+                const revealResult = isAttempted && (!timedModeActive || isSubmitted);
 
                 return (
-                  <div 
-                    key={item.id} 
+                  <div
+                    key={item.id}
                     className={`bg-black/80 border p-4 rounded-2xl space-y-3 transition ${
-                      isAttempted
+                      revealResult
                         ? isCorrect
                           ? "border-green-800/80 bg-green-950/10"
                           : "border-red-800/80 bg-red-950/10"
+                        : isAttempted
+                        ? "border-amber-700/70 bg-amber-950/10"
                         : "border-neutral-850 hover:border-neutral-750"
                     }`}
                   >
@@ -679,16 +829,23 @@ export default function PaperPatternPage() {
                         const isThisSelected = selectedOpt === optLetter;
                         const isThisTheCorrectAnswer = item.correct === optLetter;
 
-                        let buttonStyle = "bg-neutral-900/60 border-neutral-850 text-neutral-300 hover:border-neutral-700 hover:text-white";
+                        let buttonStyle =
+                          "bg-neutral-900/60 border-neutral-850 text-neutral-300 hover:border-neutral-700 hover:text-white";
 
-                        if (isAttempted) {
+                        if (revealResult) {
                           if (isThisTheCorrectAnswer) {
-                            buttonStyle = "bg-green-950/80 border-green-700 text-green-300 font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]";
+                            buttonStyle =
+                              "bg-green-950/80 border-green-700 text-green-300 font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]";
                           } else if (isThisSelected && !isCorrect) {
-                            buttonStyle = "bg-red-950/80 border-red-700 text-red-300 line-through";
+                            buttonStyle =
+                              "bg-red-950/80 border-red-700 text-red-300 line-through";
                           } else {
-                            buttonStyle = "bg-neutral-950/40 border-neutral-900 text-neutral-600";
+                            buttonStyle =
+                              "bg-neutral-950/40 border-neutral-900 text-neutral-600";
                           }
+                        } else if (isThisSelected) {
+                          buttonStyle =
+                            "bg-amber-950/70 border-amber-600 text-amber-200 font-bold";
                         }
 
                         return (
@@ -699,10 +856,10 @@ export default function PaperPatternPage() {
                             className={`w-full text-left px-3 py-2 rounded-xl border transition cursor-pointer flex items-center justify-between text-xs ${buttonStyle}`}
                           >
                             <span>{opt}</span>
-                            {isAttempted && isThisTheCorrectAnswer && (
+                            {revealResult && isThisTheCorrectAnswer && (
                               <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
                             )}
-                            {isAttempted && isThisSelected && !isCorrect && (
+                            {revealResult && isThisSelected && !isCorrect && (
                               <XCircle className="w-4 h-4 text-red-400 shrink-0" />
                             )}
                           </button>
@@ -710,13 +867,14 @@ export default function PaperPatternPage() {
                       })}
                     </div>
 
-                    {isAttempted && (
+                    {revealResult && (
                       <div className="pt-2 border-t border-neutral-900 flex items-center justify-between text-[11px] font-mono">
                         {isCorrect ? (
-                          <span className="text-green-400 font-bold">âœ“ Correct Answer!</span>
+                          <span className="text-green-400 font-bold">✓ Correct Answer!</span>
                         ) : (
                           <span className="text-red-400">
-                            âœ— Incorrect. Correct is: <strong className="text-green-400 uppercase">({item.correct})</strong>
+                            ✗ Incorrect. Correct is:{" "}
+                            <strong className="text-green-400 uppercase">({item.correct})</strong>
                           </span>
                         )}
                       </div>
@@ -727,7 +885,7 @@ export default function PaperPatternPage() {
             </div>
           ) : (
             <div className="text-center py-12 text-neutral-500 text-xs">
-              No questions found matching "{searchQuery}".
+              No questions found matching &quot;{searchQuery}&quot;.
             </div>
           )}
 
@@ -735,25 +893,23 @@ export default function PaperPatternPage() {
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-900">
             <button
               type="button"
-              onClick={() => { setIsSubmitted(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onClick={() => finishTimedExam()}
               className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer shadow-lg shadow-green-600/30 flex items-center justify-center gap-2"
             >
               <Check className="w-4 h-4" />
-              <span>Submit & View Practice Result Card</span>
+              <span>Submit &amp; View Result Card</span>
             </button>
 
             <Link
               href="/student-login"
-              className="text-xs text-neutral-400 hover:text-red-400 font-bold underline"
+              className="text-xs text-neutral-400 hover:text-red-400 font-bold underline flex items-center gap-1.5"
             >
-              Ready for Official Exam? Enter Candidate Portal â†’
+              <Laptop className="w-3.5 h-3.5 text-red-500" />
+              <span>Ready for Official Exam? Enter Candidate Portal →</span>
             </Link>
           </div>
-
         </div>
-
       </div>
     </div>
   );
 }
-

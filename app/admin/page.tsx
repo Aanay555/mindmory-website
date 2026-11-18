@@ -2,28 +2,30 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Users, 
-  Search, 
-  Trash2, 
+import GalleryPhotoManager from "@/components/GalleryPhotoManager";
+import StudentProgressViewer from "@/components/StudentProgressViewer";
+import DownloadsManager from "@/components/DownloadsManager";
+import {
+  ArrowLeft,
+  Users,
+  Search,
+  Trash2,
   RefreshCw,
   Settings,
-  Calendar,
   Coins,
-  Phone,
-  Save,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  KeyRound,
   Lock,
   Edit3,
   X,
   BookOpen,
+  FileUp,
+  Upload,
   CheckCircle,
-  Download
+  Eye,
+  Sparkles,
 } from "lucide-react";
 
 const baseStudentNames = [
@@ -31,18 +33,39 @@ const baseStudentNames = [
   "Anaya Khan", "Bilal Tariq", "Hania Amir", "Usman Ghani", "Meerab Shah",
   "Syed Daniyal", "Eshal Imran", "Mustafa Kamal", "Dua Malik", "Ayaan Siddiqui",
   "Zainab Bibi", "Hashir Mehmood", "Sarah Naveed", "Saad Rizvi", "Alishba Noor",
-  "Umer Farooq", "Bareera Junaid", "Farhan Akhtar", "Kinza Hashmi", "Taha Qureshi"
+  "Umer Farooq", "Bareera Junaid", "Farhan Akhtar", "Kinza Hashmi", "Taha Qureshi",
 ];
 
 const schoolList = [
   "The City School (PAF Chapter)", "Beaconhouse School System", "Army Public School (APS)",
   "Karachi Grammar School", "Lahore Grammar School", "Habib Public School",
-  "Generation's School", "Foundation Public School", "Roots Millennium", "Froebel's International"
+  "Generation's School", "Foundation Public School", "Roots Millennium", "Froebel's International",
 ];
 
 const categoriesList = [
-  "General Knowledge", "Art & Creative Expression", "Science & Discovery", "Mathematics Olympiad"
+  "General Knowledge", "Art & Creative Expression", "Science & Discovery", "Mathematics Olympiad",
 ];
+
+const GRADE_OPTIONS = [
+  { id: "grade-1", label: "Grade 1" },
+  { id: "grade-2", label: "Grade 2" },
+  { id: "grade-3", label: "Grade 3" },
+  { id: "grade-4", label: "Grade 4" },
+  { id: "grade-5", label: "Grade 5" },
+  { id: "grade-6", label: "Grade 6" },
+  { id: "grade-7", label: "Grade 7" },
+  { id: "grade-8", label: "Grade 8" },
+  { id: "grade-9", label: "Grade 9" },
+  { id: "grade-10", label: "Grade 10 / O Levels" },
+];
+
+interface ParsedMCQ {
+  id: number;
+  part: string;
+  q: string;
+  options: string[];
+  correct: string;
+}
 
 function getInitial100() {
   return Array.from({ length: 100 }, (_, i) => {
@@ -57,16 +80,16 @@ function getInitial100() {
       id: "std_base_" + (1001 + i),
       rollNo: rollNumber,
       name,
-      fatherName: "Guardian of " + name,
+      fatherName: "Tariq " + name.split(" ")[0],
       grade,
       category,
       school,
-      phone: "0300" + String(1000000 + i).slice(0, 7),
+      phone: "+92 300" + String(1000000 + i).slice(0, 7),
       city: "Karachi",
       payment_status: i % 7 === 0 ? "Pending" : i % 15 === 0 ? "Rejected" : "Approved",
       testScore: i % 4 === 0 ? "28/30" : i % 5 === 0 ? "24/30" : null,
       testStatus: i % 4 === 0 || i % 5 === 0 ? "Completed" : "Pending",
-      registrationDate: "Base Record"
+      registrationDate: "Base Record",
     };
   });
 }
@@ -80,16 +103,16 @@ const defaultDisciplines = [
       "Fascinating facts about science, space, nature & solar system.",
       "World geography, national symbols, flags & landmarks.",
       "History, prominent figures & global affairs.",
-      "Analytical reasoning, everyday logic & observation."
+      "Analytical reasoning, everyday logic & observation.",
     ],
     secondaryTitle: "Advanced Intellect & Critical Thinking",
     secondaryPoints: [
       "Global affairs, international organizations & treaties.",
       "Physical geography, world capitals & modern history.",
       "Scientific breakthroughs, technology, AI & inventions.",
-      "Competitive speed MCQs & critical problem-solving."
+      "Competitive speed MCQs & critical problem-solving.",
     ],
-    extraNotice: "Paper will be bilingual (English with Urdu assistance). 30 MCQs with 15 minutes test duration."
+    extraNotice: "Paper will be conducted exclusively in English. 30 MCQs with 15 minutes test duration.",
   },
   {
     id: "art",
@@ -99,25 +122,97 @@ const defaultDisciplines = [
       "Theme-based sketch rendering and shading fundamentals.",
       "Color blending, perspective perception & canvas storytelling.",
       "Original creative compositions and structured visual balance.",
-      "Cultural heritage reflections through fine strokes."
+      "Cultural heritage reflections through fine strokes.",
     ],
     secondaryTitle: "Masterstroke Technique & Conceptual Art",
     secondaryPoints: [
       "Abstract conceptualization and complex themed illustrations.",
       "Multi-medium experimentation (Pastels, Watercolors, Inks).",
       "Anatomy proportions, architectural framing & contrast mastery.",
-      "Portfolio evaluation under national jury standards."
+      "Portfolio evaluation under national jury standards.",
     ],
-    extraNotice: "Drawing sheets will be supplied by Secretariat. Students must bring their own colors and pencil kit."
-  }
+    extraNotice: "Drawing sheets will be supplied by Secretariat. Students must bring their own colors and pencil kit.",
+  },
 ];
 
+// SMART BULK MCQ PARSER (Supports numbered questions, a/b/c/d options, and Ans/Answer/Correct keys)
+function parseBulkMCQs(rawText: string, defaultPart: string): ParsedMCQ[] {
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  const results: ParsedMCQ[] = [];
+  let currentPart = defaultPart || "General Section";
+  let currentQ = "";
+  let currentOptions: string[] = [];
+  let currentCorrect = "";
+
+  const flushQuestion = () => {
+    if (currentQ && currentOptions.length >= 2) {
+      const normalizedOptions = currentOptions.map((opt, idx) => {
+        const clean = opt.replace(/^[\(\[]?[a-dA-D][\)\.\:\]]\s*/, "").trim();
+        const letter = String.fromCharCode(97 + idx);
+        return `${letter}) ${clean}`;
+      });
+      const validAns = ["a", "b", "c", "d"].includes(currentCorrect.toLowerCase())
+        ? currentCorrect.toLowerCase()
+        : "a";
+
+      results.push({
+        id: results.length + 1,
+        part: currentPart,
+        q: currentQ.replace(/^(?:Q\s*\d*[\.\:\)\-]\s*|\d+[\.\:\)\-]\s*)/i, "").trim(),
+        options: normalizedOptions,
+        correct: validAns,
+      });
+    }
+    currentQ = "";
+    currentOptions = [];
+    currentCorrect = "";
+  };
+
+  for (const line of lines) {
+    if (/^(part|section)\s*\d*/i.test(line) && !/^[a-d][\)\.\:]/i.test(line)) {
+      flushQuestion();
+      currentPart = line;
+      continue;
+    }
+
+    const ansMatch = line.match(/^(?:ans(?:wer)?|correct(?:\s*answer)?|key)\s*[\:\-\=]\s*[\(\[]?([a-dA-D])/i);
+    if (ansMatch) {
+      currentCorrect = ansMatch[1].toLowerCase();
+      flushQuestion();
+      continue;
+    }
+
+    const optMatch = line.match(/^[\(\[]?([a-dA-D])[\)\.\:\]]\s+(.+)/);
+    if (optMatch && currentQ) {
+      currentOptions.push(`${optMatch[1].toLowerCase()}) ${optMatch[2].trim()}`);
+      continue;
+    }
+
+    if (currentQ && currentOptions.length >= 2) {
+      flushQuestion();
+    }
+
+    if (!currentQ) {
+      currentQ = line;
+    } else if (currentOptions.length === 0) {
+      currentQ += " " + line;
+    }
+  }
+
+  flushQuestion();
+  return results;
+}
+
 export default function AdminPortalPage() {
-    const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
-  const [activeTab, setActiveTab] = useState<"students" | "syllabus" | "settings">("students");
+  const [activeTab, setActiveTab] = useState<"students" | "paper-uploader" | "syllabus" | "settings">("students");
 
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,6 +220,7 @@ export default function AdminPortalPage() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
+  const [viewingSlip, setViewingSlip] = useState<any | null>(null);
 
   const [editingCandidate, setEditingCandidate] = useState<any | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -135,8 +231,18 @@ export default function AdminPortalPage() {
     category: "",
     phone: "",
     city: "",
-    payment_status: "Pending"
+    payment_status: "Pending",
   });
+
+  // REAL-PAPER & 100-MCQ BULK UPLOADER STATE
+  const [selectedUploadGrade, setSelectedUploadGrade] = useState("grade-1");
+  const [uploadSubject, setUploadSubject] = useState("General Knowledge");
+  const [uploadDuration, setUploadDuration] = useState("15 minutes");
+  const [uploadMode, setUploadMode] = useState<"replace" | "append">("replace");
+  const [rawMcqText, setRawMcqText] = useState("");
+  const [parsedPreview, setParsedPreview] = useState<ParsedMCQ[]>([]);
+  const [customPapersMap, setCustomPapersMap] = useState<Record<string, any>>({});
+  const [paperUploadSuccess, setPaperUploadSuccess] = useState("");
 
   const [disciplines, setDisciplines] = useState<any[]>(defaultDisciplines);
   const [editingDiscipline, setEditingDiscipline] = useState<any | null>(null);
@@ -146,7 +252,7 @@ export default function AdminPortalPage() {
     primaryPoints: "",
     secondaryTitle: "",
     secondaryPoints: "",
-    extraNotice: ""
+    extraNotice: "",
   });
   const [syllabusSaved, setSyllabusSaved] = useState(false);
 
@@ -154,7 +260,7 @@ export default function AdminPortalPage() {
   const [examDate, setExamDate] = useState("15 January 2027");
   const [resultsDate, setResultsDate] = useState("25 January 2027");
   const [fee, setFee] = useState<number>(1100);
-  const [whatsapp, setWhatsapp] = useState("923000000000");
+  const [whatsapp, setWhatsapp] = useState("923333400000");
   const [adminPin, setAdminPin] = useState("1234");
   const [settingsSaved, setSettingsSaved] = useState(false);
 
@@ -166,7 +272,10 @@ export default function AdminPortalPage() {
         if (parsed.deadline) setDeadline(parsed.deadline);
         if (parsed.examDate) setExamDate(parsed.examDate);
         if (parsed.resultsDate) setResultsDate(parsed.resultsDate);
-        if (parsed.fee) setFee(Number(parsed.fee));
+        if (parsed.fee) {
+          const parsedFee = Number(parsed.fee);
+          setFee(parsedFee === 1500 ? 1100 : parsedFee);
+        }
         if (parsed.whatsapp) setWhatsapp(parsed.whatsapp);
       }
       const savedPin = localStorage.getItem("mindmory_admin_pin");
@@ -178,6 +287,13 @@ export default function AdminPortalPage() {
       if (storedDisc) {
         const parsed = JSON.parse(storedDisc);
         if (Array.isArray(parsed) && parsed.length > 0) setDisciplines(parsed);
+      }
+    } catch {}
+
+    try {
+      const savedPapers = localStorage.getItem("mindmory_custom_papers");
+      if (savedPapers) {
+        setCustomPapersMap(JSON.parse(savedPapers));
       }
     } catch {}
 
@@ -203,12 +319,16 @@ export default function AdminPortalPage() {
 
       const s1 = localStorage.getItem("mindmory_students");
       if (s1) {
-        try { mainStored = JSON.parse(s1); } catch {}
+        try {
+          mainStored = JSON.parse(s1);
+        } catch {}
       }
 
       const s2 = localStorage.getItem("mindmory_registered_students");
       if (s2) {
-        try { customRegistered = JSON.parse(s2); } catch {}
+        try {
+          customRegistered = JSON.parse(s2);
+        } catch {}
       }
 
       const studentsMap = new Map<string, any>();
@@ -226,7 +346,7 @@ export default function AdminPortalPage() {
                 ...st,
                 rollNo: rNo,
                 fatherName: st.fatherName || st.father_name || current.fatherName || "",
-                payment_status: st.payment_status || current.payment_status || "Pending"
+                payment_status: st.payment_status || current.payment_status || "Pending",
               });
             }
           });
@@ -242,7 +362,8 @@ export default function AdminPortalPage() {
 
       setStudents(mergedList);
       localStorage.setItem("mindmory_students", JSON.stringify(mergedList));
-    } catch {} finally {
+    } catch {
+    } finally {
       setTimeout(() => setIsRefreshing(false), 400);
     }
   };
@@ -270,7 +391,7 @@ export default function AdminPortalPage() {
       category: student.category || "General Knowledge",
       phone: student.phone || "",
       city: student.city || "Karachi",
-      payment_status: student.payment_status || "Pending"
+      payment_status: student.payment_status || "Pending",
     });
   };
 
@@ -289,7 +410,7 @@ export default function AdminPortalPage() {
           category: editFormData.category,
           phone: editFormData.phone.trim(),
           city: editFormData.city.trim(),
-          payment_status: editFormData.payment_status
+          payment_status: editFormData.payment_status,
         };
       }
       return st;
@@ -311,6 +432,108 @@ export default function AdminPortalPage() {
     } catch {}
   };
 
+  // BULK MCQ UPLOAD HANDLERS
+  const handleFileUploadTxt = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setRawMcqText(reader.result);
+        const parsed = parseBulkMCQs(reader.result, `${uploadSubject} — General`);
+        setParsedPreview(parsed);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleLoadSampleTemplate = () => {
+    const sample = `Part 1: General Science & World
+1. Which planet is closest to the Sun?
+a) Venus
+b) Mercury
+c) Mars
+Ans: b
+
+2. How many continents are there on Earth?
+a) 5
+b) 6
+c) 7
+Ans: c
+
+3. What is the national flower of Pakistan?
+a) Rose
+b) Jasmine
+c) Tulip
+Ans: b`;
+    setRawMcqText(sample);
+    setParsedPreview(parseBulkMCQs(sample, `${uploadSubject} — Section A`));
+  };
+
+  const handlePreviewMCQs = () => {
+    const parsed = parseBulkMCQs(rawMcqText, `${uploadSubject} — Section A`);
+    setParsedPreview(parsed);
+    if (parsed.length === 0) {
+      alert(
+        "No valid MCQs detected. Please ensure each question has options a), b), c) and an 'Ans: a/b/c' line."
+      );
+    }
+  };
+
+  const handlePublishPaper = () => {
+    const parsed = parsedPreview.length > 0 ? parsedPreview : parseBulkMCQs(rawMcqText, `${uploadSubject} — Section A`);
+    if (parsed.length === 0) {
+      alert("Please paste or upload valid MCQs first.");
+      return;
+    }
+
+    const gradeObj = GRADE_OPTIONS.find((g) => g.id === selectedUploadGrade) || GRADE_OPTIONS[0];
+    const existingQuestions: ParsedMCQ[] =
+      uploadMode === "append" && customPapersMap[selectedUploadGrade]?.questions
+        ? customPapersMap[selectedUploadGrade].questions
+        : [];
+
+    const combined = [...existingQuestions, ...parsed].map((item, idx) => ({
+      ...item,
+      id: idx + 1,
+    }));
+
+    const updatedPapers = {
+      ...customPapersMap,
+      [selectedUploadGrade]: {
+        gradeId: selectedUploadGrade,
+        gradeTitle: gradeObj.label,
+        subject: uploadSubject,
+        duration: uploadDuration,
+        totalMarks: combined.length,
+        questions: combined,
+        updatedAt: new Date().toLocaleString(),
+      },
+    };
+
+    setCustomPapersMap(updatedPapers);
+    try {
+      localStorage.setItem("mindmory_custom_papers", JSON.stringify(updatedPapers));
+    } catch {}
+
+    setPaperUploadSuccess(
+      `Published ${combined.length} MCQs for ${gradeObj.label} (${uploadSubject})! Live on Model Papers & Exam Terminal.`
+    );
+    setRawMcqText("");
+    setParsedPreview([]);
+    setTimeout(() => setPaperUploadSuccess(""), 5000);
+  };
+
+  const handleResetGradePaper = (gradeId: string) => {
+    if (!confirm("Reset this grade back to the default 30 sample MCQs?")) return;
+    const copy = { ...customPapersMap };
+    delete copy[gradeId];
+    setCustomPapersMap(copy);
+    try {
+      localStorage.setItem("mindmory_custom_papers", JSON.stringify(copy));
+    } catch {}
+  };
+
   const handleOpenDisciplineEdit = (disc: any) => {
     setEditingDiscipline(disc);
     setDiscForm({
@@ -319,7 +542,7 @@ export default function AdminPortalPage() {
       primaryPoints: disc.primaryPoints.join("\n"),
       secondaryTitle: disc.secondaryTitle,
       secondaryPoints: disc.secondaryPoints.join("\n"),
-      extraNotice: disc.extraNotice || ""
+      extraNotice: disc.extraNotice || "",
     });
   };
 
@@ -333,10 +556,16 @@ export default function AdminPortalPage() {
           ...d,
           name: discForm.name.trim(),
           primaryTitle: discForm.primaryTitle.trim(),
-          primaryPoints: discForm.primaryPoints.split("\n").map((p) => p.trim()).filter((p) => p.length > 0),
+          primaryPoints: discForm.primaryPoints
+            .split("\n")
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0),
           secondaryTitle: discForm.secondaryTitle.trim(),
-          secondaryPoints: discForm.secondaryPoints.split("\n").map((p) => p.trim()).filter((p) => p.length > 0),
-          extraNotice: discForm.extraNotice.trim() || undefined
+          secondaryPoints: discForm.secondaryPoints
+            .split("\n")
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0),
+          extraNotice: discForm.extraNotice.trim() || undefined,
         };
       }
       return d;
@@ -359,7 +588,7 @@ export default function AdminPortalPage() {
       examDate,
       resultsDate,
       fee,
-      whatsapp: whatsapp.replace(/[^0-9]/g, "")
+      whatsapp: whatsapp.replace(/[^0-9]/g, ""),
     };
     try {
       localStorage.setItem("mindmory_site_settings", JSON.stringify(config));
@@ -371,9 +600,15 @@ export default function AdminPortalPage() {
 
   const filteredStudents = students.filter((s) => {
     const q = searchQuery.trim().toLowerCase();
-    const matchesSearch = !q || s.name?.toLowerCase().includes(q) || s.rollNo?.toLowerCase().includes(q) || s.school?.toLowerCase().includes(q);
+    const matchesSearch =
+      !q ||
+      s.name?.toLowerCase().includes(q) ||
+      s.rollNo?.toLowerCase().includes(q) ||
+      s.school?.toLowerCase().includes(q);
     const matchesCat = filterCategory === "all" || s.category === filterCategory;
-    const matchesFee = filterFeeStatus === "all" || s.payment_status?.toLowerCase() === filterFeeStatus.toLowerCase();
+    const matchesFee =
+      filterFeeStatus === "all" ||
+      s.payment_status?.toLowerCase() === filterFeeStatus.toLowerCase();
     return matchesSearch && matchesCat && matchesFee;
   });
 
@@ -386,8 +621,12 @@ export default function AdminPortalPage() {
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
 
-  const approvedCount = students.filter((s) => s.payment_status?.toLowerCase() === "approved").length;
-  const pendingCount = students.filter((s) => s.payment_status?.toLowerCase() === "pending").length;
+  const approvedCount = students.filter(
+    (s) => s.payment_status?.toLowerCase() === "approved"
+  ).length;
+  const pendingCount = students.filter(
+    (s) => s.payment_status?.toLowerCase() === "pending"
+  ).length;
 
   if (!isUnlocked) {
     return (
@@ -398,7 +637,9 @@ export default function AdminPortalPage() {
               <Lock className="w-6 h-6" />
             </div>
             <h1 className="text-xl font-black tracking-tight">Admin Portal Locked</h1>
-            <p className="text-xs text-neutral-400">Enter Secretariat Security PIN to access candidate records and settings.</p>
+            <p className="text-xs text-neutral-400">
+              Enter Secretariat Security PIN to access candidate records, bulk MCQ uploader, and settings.
+            </p>
           </div>
           <form
             onSubmit={(e) => {
@@ -420,7 +661,9 @@ export default function AdminPortalPage() {
               autoFocus
               className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-mono text-white focus:outline-none focus:border-red-600"
             />
-            {pinError && <p className="text-xs text-red-400 text-center font-semibold">{pinError}</p>}
+            {pinError && (
+              <p className="text-xs text-red-400 text-center font-semibold">{pinError}</p>
+            )}
             <button
               type="submit"
               className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
@@ -437,19 +680,22 @@ export default function AdminPortalPage() {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-black text-neutral-100 font-sans pt-8 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-900">
           <div>
-            <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-red-500 mb-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-red-500 mb-2"
+            >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Public Website</span>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>Mindmory Secretariat Admin Dashboard</span>
+              <span>MINDMORY Secretariat Admin Dashboard</span>
               <span className="text-[10px] font-mono font-bold uppercase bg-red-950 border border-red-800 text-red-400 px-2.5 py-0.5 rounded-full">
                 Active Controller
               </span>
@@ -495,43 +741,59 @@ export default function AdminPortalPage() {
         </div>
 
         {/* TABS */}
-        <div className="flex border-b border-neutral-900 gap-6 text-xs font-bold">
+        <div className="flex overflow-x-auto border-b border-neutral-900 gap-6 text-xs font-bold whitespace-nowrap">
           <button
             onClick={() => setActiveTab("students")}
             className={`pb-3 transition flex items-center gap-2 cursor-pointer ${
-              activeTab === "students" ? "text-red-500 border-b-2 border-red-600" : "text-neutral-400 hover:text-white"
+              activeTab === "students"
+                ? "text-red-500 border-b-2 border-red-600"
+                : "text-neutral-400 hover:text-white"
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Candidates Roster & Editor</span>
+            <span>Candidates Roster &amp; Slip Verification</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("paper-uploader")}
+            className={`pb-3 transition flex items-center gap-2 cursor-pointer ${
+              activeTab === "paper-uploader"
+                ? "text-red-500 border-b-2 border-red-600"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            <FileUp className="w-4 h-4 text-amber-400" />
+            <span>Bulk Paper &amp; 100-MCQ Uploader</span>
           </button>
 
           <button
             onClick={() => setActiveTab("syllabus")}
             className={`pb-3 transition flex items-center gap-2 cursor-pointer ${
-              activeTab === "syllabus" ? "text-red-500 border-b-2 border-red-600" : "text-neutral-400 hover:text-white"
+              activeTab === "syllabus"
+                ? "text-red-500 border-b-2 border-red-600"
+                : "text-neutral-400 hover:text-white"
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Syllabus & Category Manager ({disciplines.length})</span>
+            <span>Syllabus &amp; Category Manager ({disciplines.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab("settings")}
             className={`pb-3 transition flex items-center gap-2 cursor-pointer ${
-              activeTab === "settings" ? "text-red-500 border-b-2 border-red-600" : "text-neutral-400 hover:text-white"
+              activeTab === "settings"
+                ? "text-red-500 border-b-2 border-red-600"
+                : "text-neutral-400 hover:text-white"
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Portal Settings & PIN</span>
+            <span>Portal Settings &amp; PIN</span>
           </button>
         </div>
 
-        {/* TAB 1: CANDIDATES ROSTER WITH WORKING PAGINATION */}
+        {/* TAB 1: CANDIDATES ROSTER */}
         {activeTab === "students" && (
           <div className="space-y-4">
-            
-            {/* Filter Bar */}
             <div className="flex flex-col md:flex-row gap-3 items-center justify-between bg-neutral-950 border border-neutral-850 p-4 rounded-2xl">
               <div className="relative w-full md:w-72">
                 <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-500" />
@@ -563,8 +825,8 @@ export default function AdminPortalPage() {
                 >
                   <option value="all">All Disciplines</option>
                   <option value="General Knowledge">General Knowledge</option>
-                  <option value="Art & Creative Expression">Art & Creative Expression</option>
-                  <option value="Science & Discovery">Science & Discovery</option>
+                  <option value="Art & Creative Expression">Art &amp; Creative Expression</option>
+                  <option value="Science & Discovery">Science &amp; Discovery</option>
                   <option value="Mathematics Olympiad">Mathematics Olympiad</option>
                 </select>
 
@@ -581,16 +843,16 @@ export default function AdminPortalPage() {
               </div>
             </div>
 
-            {/* Table */}
             <div className="bg-neutral-950 border border-neutral-850 rounded-2xl overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-neutral-900/80 text-neutral-400 uppercase font-mono text-[10px] border-b border-neutral-850">
                     <tr>
                       <th className="py-3 px-4">Roll Number</th>
-                      <th className="py-3 px-4">Candidate & Father</th>
-                      <th className="py-3 px-4">Class & Discipline</th>
+                      <th className="py-3 px-4">Candidate &amp; Father</th>
+                      <th className="py-3 px-4">Class &amp; Discipline</th>
                       <th className="py-3 px-4">School</th>
+                      <th className="py-3 px-4 text-center">Bank Slip</th>
                       <th className="py-3 px-4 text-center">Fee Status</th>
                       <th className="py-3 px-4 text-center">Exam Result</th>
                       <th className="py-3 px-4 text-right">Actions</th>
@@ -605,13 +867,29 @@ export default function AdminPortalPage() {
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span className="font-bold text-white block">{st.name}</span>
-                            <span className="text-[11px] text-neutral-500 block">{st.fatherName || "â€”"}</span>
+                            <span className="text-[11px] text-neutral-500 block">{st.fatherName || "—"}</span>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="text-neutral-400">{st.grade} â€¢ </span>
+                            <span className="text-neutral-400">{st.grade} • </span>
                             <span className="text-amber-400 font-semibold">{st.category}</span>
                           </td>
                           <td className="py-3 px-4 text-neutral-400 truncate max-w-xs">{st.school}</td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            {st.depositSlipData ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewingSlip(st)}
+                                className="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-700 hover:border-amber-500 text-amber-400 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>View Slip</span>
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-neutral-600">
+                                {st.depositSlipName || "No Slip"}
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             <select
                               value={st.payment_status || "Pending"}
@@ -624,9 +902,9 @@ export default function AdminPortalPage() {
                                   : "bg-amber-950/80 text-amber-400 border-amber-800"
                               }`}
                             >
-                              <option value="Approved" className="bg-black text-green-400">âœ“ Approved</option>
-                              <option value="Pending" className="bg-black text-amber-400">â³ Pending</option>
-                              <option value="Rejected" className="bg-black text-red-400">âœ— Rejected</option>
+                              <option value="Approved" className="bg-black text-green-400">✓ Approved</option>
+                              <option value="Pending" className="bg-black text-amber-400">Pending</option>
+                              <option value="Rejected" className="bg-black text-red-400">✗ Rejected</option>
                             </select>
                           </td>
                           <td className="py-3 px-4 text-center whitespace-nowrap font-mono font-bold">
@@ -662,7 +940,7 @@ export default function AdminPortalPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="text-center py-8 text-neutral-500">
+                        <td colSpan={8} className="text-center py-8 text-neutral-500">
                           No candidate records found matching current query.
                         </td>
                       </tr>
@@ -671,7 +949,6 @@ export default function AdminPortalPage() {
                 </table>
               </div>
 
-              {/* PAGINATION BAR (PREVIOUS / NEXT) */}
               <div className="bg-neutral-900/50 border-t border-neutral-900 px-4 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                 <span className="text-neutral-400">
                   Showing <span className="font-bold text-white">{totalItems === 0 ? 0 : startIndex + 1}</span> to{" "}
@@ -705,20 +982,218 @@ export default function AdminPortalPage() {
                   </button>
                 </div>
               </div>
-
             </div>
-
           </div>
         )}
 
-        {/* TAB 2: SYLLABUS & CATEGORY MANAGER */}
+        {/* TAB 2: BULK REAL-PAPER & 100-MCQ UPLOADER */}
+        {activeTab === "paper-uploader" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+            <div className="lg:col-span-8 bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-900 pb-4">
+                <div>
+                  <span className="text-[10px] font-mono text-amber-400 uppercase font-bold tracking-widest block">
+                    SELF-SERVICE CONTENT MANAGER
+                  </span>
+                  <h2 className="text-xl font-black text-white mt-0.5">
+                    Bulk Upload 100 MCQs / Preparation Material
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLoadSampleTemplate}
+                  className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-xs font-bold text-amber-400 rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Load Format Example</span>
+                </button>
+              </div>
+
+              {paperUploadSuccess && (
+                <div className="bg-green-950/80 border border-green-700 text-green-300 p-4 rounded-2xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                  <span>{paperUploadSuccess}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="block text-neutral-400 font-bold mb-1">Target Grade</label>
+                  <select
+                    value={selectedUploadGrade}
+                    onChange={(e) => setSelectedUploadGrade(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white focus:border-red-600 focus:outline-none"
+                  >
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-400 font-bold mb-1">Subject / Discipline</label>
+                  <select
+                    value={uploadSubject}
+                    onChange={(e) => setUploadSubject(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white focus:border-red-600 focus:outline-none"
+                  >
+                    <option value="General Knowledge">General Knowledge</option>
+                    <option value="Art & Creative Expression">Art &amp; Creative Expression</option>
+                    <option value="Science & Discovery">Science &amp; Discovery</option>
+                    <option value="Mathematics Olympiad">Mathematics Olympiad</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-neutral-400 font-bold mb-1">Exam Duration</label>
+                  <input
+                    type="text"
+                    value={uploadDuration}
+                    onChange={(e) => setUploadDuration(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white focus:border-red-600 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-neutral-400 font-bold mb-1">Upload Mode</label>
+                  <select
+                    value={uploadMode}
+                    onChange={(e) => setUploadMode(e.target.value as "replace" | "append")}
+                    className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white focus:border-red-600 focus:outline-none"
+                  >
+                    <option value="replace">Replace Grade Paper</option>
+                    <option value="append">Append to Existing</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Optional .TXT File Import */}
+              <div className="bg-black border border-dashed border-neutral-800 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <span className="text-neutral-400 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-red-500" />
+                  <span>Upload a .TXT file or paste 100 MCQs directly below:</span>
+                </span>
+                <input
+                  type="file"
+                  accept=".txt"
+                  onChange={handleFileUploadTxt}
+                  className="text-xs text-neutral-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-neutral-800 file:text-white hover:file:bg-red-600 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-300 mb-1.5">
+                  Paste 100 Questions with Options &amp; Answer Key (English Only)
+                </label>
+                <textarea
+                  rows={12}
+                  value={rawMcqText}
+                  onChange={(e) => setRawMcqText(e.target.value)}
+                  placeholder={`Paste your 100 MCQs here in this format:\n\n1. What is the capital of Pakistan?\na) Karachi\nb) Islamabad\nc) Lahore\nAns: b\n\n2. How many provinces are in Pakistan?\na) 3\nb) 4\nc) 5\nAns: b`}
+                  className="w-full bg-black border border-neutral-800 rounded-2xl p-4 text-xs font-mono text-neutral-100 focus:outline-none focus:border-red-600 leading-relaxed"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handlePreviewMCQs}
+                  className="px-5 py-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  Validate &amp; Preview ({parseBulkMCQs(rawMcqText, "").length} Detected)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePublishPaper}
+                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 cursor-pointer flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Publish Paper to Website</span>
+                </button>
+              </div>
+
+              {parsedPreview.length > 0 && (
+                <div className="bg-black border border-neutral-800 rounded-2xl p-4 space-y-2 max-h-60 overflow-y-auto">
+                  <span className="text-[11px] font-bold text-green-400 uppercase block">
+                    Previewing {parsedPreview.length} Validated Questions:
+                  </span>
+                  {parsedPreview.slice(0, 10).map((item) => (
+                    <div key={item.id} className="text-xs border-b border-neutral-900 pb-2">
+                      <p className="font-bold text-white">
+                        {item.id}. {item.q}
+                      </p>
+                      <p className="text-neutral-400">
+                        {item.options.join(" | ")} —{" "}
+                        <span className="text-green-400 font-bold uppercase">Ans: {item.correct}</span>
+                      </p>
+                    </div>
+                  ))}
+                  {parsedPreview.length > 10 && (
+                    <p className="text-[11px] text-neutral-500">
+                      ...and {parsedPreview.length - 10} more questions ready to publish.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT SIDEBAR: PUBLISHED CUSTOM PAPERS STATUS */}
+            <div className="lg:col-span-4 bg-neutral-950 border border-neutral-850 rounded-3xl p-6 space-y-4 shadow-2xl h-fit">
+              <h3 className="text-base font-black text-white border-b border-neutral-900 pb-3">
+                Grade-Wise Active Question Banks
+              </h3>
+              <p className="text-xs text-neutral-400">
+                By default each grade has 30 sample MCQs. When you publish 100 MCQs for a grade, it updates live on the Model Papers page.
+              </p>
+
+              <div className="space-y-2">
+                {GRADE_OPTIONS.map((g) => {
+                  const custom = customPapersMap[g.id];
+                  return (
+                    <div
+                      key={g.id}
+                      className="bg-black border border-neutral-850 rounded-xl p-3 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <span className="font-bold text-white block">{g.label}</span>
+                        <span className="text-[11px] text-neutral-400">
+                          {custom
+                            ? `${custom.questions.length} Custom MCQs Published`
+                            : "30 Default Sample MCQs"}
+                        </span>
+                      </div>
+                      {custom ? (
+                        <button
+                          type="button"
+                          onClick={() => handleResetGradePaper(g.id)}
+                          className="text-[10px] font-bold text-red-400 hover:text-red-300 underline cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      ) : (
+                        <span className="text-[10px] font-mono text-neutral-500">Default</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: SYLLABUS & CATEGORY MANAGER */}
         {activeTab === "syllabus" && (
           <div className="space-y-6 text-left">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black text-white">Curriculum Disciplines & Syllabus Outlines</h2>
+                <h2 className="text-xl font-black text-white">
+                  Curriculum Disciplines &amp; Syllabus Outlines
+                </h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Sadaf can edit headings, add points, or revise syllabus criteria for any category here.
+                  Edit headings, add points, or revise syllabus criteria for any category here.
                 </p>
               </div>
 
@@ -731,7 +1206,10 @@ export default function AdminPortalPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {disciplines.map((cat) => (
-                <div key={cat.id} className="bg-neutral-950 border border-neutral-850 rounded-2xl p-6 space-y-4 shadow-xl flex flex-col justify-between">
+                <div
+                  key={cat.id}
+                  className="bg-neutral-950 border border-neutral-850 rounded-2xl p-6 space-y-4 shadow-xl flex flex-col justify-between"
+                >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
                       <h3 className="text-base font-black text-white">{cat.name}</h3>
@@ -773,13 +1251,13 @@ export default function AdminPortalPage() {
           </div>
         )}
 
-        {/* TAB 3: PORTAL SETTINGS & PIN */}
+        {/* TAB 4: PORTAL SETTINGS & PIN */}
         {activeTab === "settings" && (
           <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 max-w-2xl space-y-6 text-left shadow-2xl">
-            <h2 className="text-xl font-black text-white">Contest Parameters & Security</h2>
+            <h2 className="text-xl font-black text-white">Contest Parameters &amp; Security</h2>
             {settingsSaved && (
               <div className="bg-green-950/80 border border-green-800 text-green-300 p-3 rounded-xl text-xs font-bold">
-                âœ“ Settings & PIN saved!
+                ✓ Settings &amp; PIN saved!
               </div>
             )}
             <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
@@ -834,8 +1312,41 @@ export default function AdminPortalPage() {
             </form>
           </div>
         )}
-
       </div>
+
+      {/* VIEW BANK DEPOSIT SLIP MODAL */}
+      {viewingSlip && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-6 max-w-lg w-full space-y-4 text-white relative shadow-2xl text-left">
+            <button
+              type="button"
+              onClick={() => setViewingSlip(null)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-base font-black">
+              Bank Deposit Slip — {viewingSlip.rollNo} ({viewingSlip.name})
+            </h3>
+            <p className="text-xs text-neutral-400">File: {viewingSlip.depositSlipName}</p>
+            {viewingSlip.depositSlipData?.startsWith("data:image") ? (
+              <img
+                src={viewingSlip.depositSlipData}
+                alt="Bank Deposit Slip"
+                className="w-full max-h-96 object-contain rounded-xl border border-neutral-800 bg-black"
+              />
+            ) : (
+              <a
+                href={viewingSlip.depositSlipData}
+                download={viewingSlip.depositSlipName || "deposit-slip.pdf"}
+                className="inline-block px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold"
+              >
+                Download Deposit Slip File
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* EDIT SYLLABUS MODAL */}
       {editingDiscipline && (
@@ -864,7 +1375,9 @@ export default function AdminPortalPage() {
               </div>
 
               <div className="bg-neutral-900/60 p-3 rounded-xl border border-neutral-850 space-y-2">
-                <span className="text-[10px] font-mono text-red-400 uppercase font-bold block">Primary Division (Grades 1-5)</span>
+                <span className="text-[10px] font-mono text-red-400 uppercase font-bold block">
+                  Primary Division (Grades 1-5)
+                </span>
                 <input
                   type="text"
                   placeholder="Primary Title"
@@ -882,7 +1395,9 @@ export default function AdminPortalPage() {
               </div>
 
               <div className="bg-neutral-900/60 p-3 rounded-xl border border-neutral-850 space-y-2">
-                <span className="text-[10px] font-mono text-amber-400 uppercase font-bold block">Secondary Division (Grades 6-10)</span>
+                <span className="text-[10px] font-mono text-amber-400 uppercase font-bold block">
+                  Secondary Division (Grades 6-10)
+                </span>
                 <input
                   type="text"
                   placeholder="Secondary Title"
@@ -933,7 +1448,6 @@ export default function AdminPortalPage() {
 
             <h3 className="text-base font-black">Edit Candidate: {editingCandidate.rollNo}</h3>
 
-            {/* EDIT CANDIDATE FORM (WITH FATHER NAME INCLUDED) */}
             <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -948,7 +1462,7 @@ export default function AdminPortalPage() {
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 font-bold mb-1">Father / Guardian Name</label>
+                  <label className="block text-neutral-400 font-bold mb-1">Father Name</label>
                   <input
                     type="text"
                     required
@@ -1000,8 +1514,8 @@ export default function AdminPortalPage() {
                     className="w-full bg-black border border-neutral-800 rounded-xl px-2.5 py-2 text-white focus:outline-none focus:border-red-600"
                   >
                     <option value="General Knowledge">General Knowledge</option>
-                    <option value="Art & Creative Expression">Art & Creative Expression</option>
-                    <option value="Science & Discovery">Science & Discovery</option>
+                    <option value="Art & Creative Expression">Art &amp; Creative Expression</option>
+                    <option value="Science & Discovery">Science &amp; Discovery</option>
                     <option value="Mathematics Olympiad">Mathematics Olympiad</option>
                   </select>
                 </div>
@@ -1009,7 +1523,7 @@ export default function AdminPortalPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-400 font-bold mb-1">Contact Phone</label>
+                  <label className="block text-neutral-400 font-bold mb-1">School WhatsApp</label>
                   <input
                     type="text"
                     value={editFormData.phone}
@@ -1051,7 +1565,9 @@ export default function AdminPortalPage() {
           </div>
         </div>
       )}
-
+      <GalleryPhotoManager />
+      <StudentProgressViewer /> 
+      <DownloadsManager />
     </div>
   );
 }

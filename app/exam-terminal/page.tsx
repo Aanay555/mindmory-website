@@ -1,22 +1,28 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { 
-  ArrowLeft, 
-  Clock, 
-  ShieldCheck, 
-  CheckCircle, 
-  AlertCircle, 
-  Send, 
-  User, 
-  ChevronRight, 
-  ChevronLeft 
+import {
+  Clock,
+  ShieldCheck,
+  CheckCircle,
+  Send,
+  User,
+  ChevronRight,
+  ChevronLeft,
+  ShieldAlert,
+  Maximize2,
 } from "lucide-react";
 
-// GRADE-SPECIFIC QUESTION BANKS (PURE ENGLISH ONLY)
-const gradeQuestionBanks: Record<string, Array<{ id: number; qEn: string; options: string[]; answer: number }>> = {
+interface ExamQuestion {
+  id: number;
+  qEn: string;
+  options: string[];
+  answer: number;
+}
+
+// GRADE-SPECIFIC DEFAULT QUESTION BANKS (PURE ENGLISH ONLY)
+const gradeQuestionBanks: Record<string, ExamQuestion[]> = {
   "Grade 1": [
     { id: 1, qEn: "What is the national animal of Pakistan?", options: ["Markhor", "Lion", "Bengal Tiger", "Snow Leopard"], answer: 0 },
     { id: 2, qEn: "How many colors are there in the national flag of Pakistan?", options: ["One", "Two", "Three", "Four"], answer: 1 },
@@ -86,10 +92,9 @@ const gradeQuestionBanks: Record<string, Array<{ id: number; qEn: string; option
     { id: 3, qEn: "What is the exact pH value of chemically pure neutral water measured at 25°C?", options: ["5.0", "7.0", "9.0", "12.0"], answer: 1 },
     { id: 4, qEn: "Which major overland infrastructure initiative links Central Asia directly with the Arabian Sea?", options: ["CPEC", "TAPI Pipeline", "ECO Highway", "Maritime Silk Route"], answer: 0 },
     { id: 5, qEn: "Which type of optical curved mirror is standardly fitted for vehicle rear-view driving safety?", options: ["Concave Mirror", "Convex Mirror", "Plane Mirror", "Cylindrical Mirror"], answer: 1 },
-  ]
+  ],
 };
 
-// Strict Grade Extraction Logic
 function parseCleanGrade(raw: string): string {
   if (!raw) return "Grade 1";
   const str = raw.trim().toLowerCase();
@@ -108,18 +113,30 @@ function parseCleanGrade(raw: string): string {
   return "Grade 1";
 }
 
-export default function ExamTerminalPage() {
-  const router = useRouter();
+function gradeToStorageKey(cleanGrade: string): string {
+  const num = cleanGrade.replace(/\D/g, "") || "1";
+  return `grade-${num}`;
+}
 
+export default function ExamTerminalPage() {
   const [student, setStudent] = useState<any>(null);
   const [targetGrade, setTargetGrade] = useState("Grade 1");
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  
+
   const [timeLeft, setTimeLeft] = useState(15 * 60);
   const [isExamCompleted, setIsExamCompleted] = useState(false);
-  const [finalScore, setFinalScore] = useState<{ correct: number; total: number; percentage: number } | null>(null);
+  const [finalScore, setFinalScore] = useState<{
+    correct: number;
+    total: number;
+    percentage: number;
+  } | null>(null);
+
+  // ANTI-CHEATING STATES
+  const [tabViolations, setTabViolations] = useState(0);
+  const [antiCheatWarning, setAntiCheatWarning] = useState("");
+  const [submissionReason, setSubmissionReason] = useState("Submitted by Candidate");
 
   useEffect(() => {
     let currentStudent: any = null;
@@ -137,7 +154,7 @@ export default function ExamTerminalPage() {
         name: "Verified Candidate",
         grade: "Grade 1",
         category: "General Knowledge",
-        school: "Mindmory Assessment Center"
+        school: "MINDMORY Assessment Center",
       };
     }
 
@@ -149,19 +166,49 @@ export default function ExamTerminalPage() {
   }, []);
 
   const fetchClassWiseQuestions = async (cleanGrade: string) => {
-    let fetchedFromDb = false;
+    // 1. Check Admin Bulk-Uploaded Real Paper first (localStorage)
+    try {
+      const savedCustom = localStorage.getItem("mindmory_custom_papers");
+      if (savedCustom) {
+        const parsedMap = JSON.parse(savedCustom);
+        const key = gradeToStorageKey(cleanGrade);
+        const customPaper = parsedMap?.[key];
+        if (customPaper && Array.isArray(customPaper.questions) && customPaper.questions.length > 0) {
+          const formattedCustom: ExamQuestion[] = customPaper.questions.map((item: any, idx: number) => {
+            const cleanOpts = (item.options || []).map((o: string) =>
+              String(o).replace(/^[a-dA-D][\)\.\:]\s*/, "").trim()
+            );
+            const letter = String(item.correct || "a").trim().toLowerCase();
+            const ansIdx = Math.max(0, letter.charCodeAt(0) - 97);
+            return {
+              id: idx + 1,
+              qEn: item.q,
+              options: cleanOpts,
+              answer: ansIdx < cleanOpts.length ? ansIdx : 0,
+            };
+          });
+          setQuestions(formattedCustom);
+          return;
+        }
+      }
+    } catch {}
 
+    // 2. Check Supabase if configured
+    let fetchedFromDb = false;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (supabaseUrl && supabaseKey) {
       try {
-        const res = await fetch(`${supabaseUrl}/rest/v1/official_exam_questions?grade=eq.${encodeURIComponent(cleanGrade)}&select=*`, {
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/official_exam_questions?grade=eq.${encodeURIComponent(cleanGrade)}&select=*`,
+          {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`,
+            },
           }
-        });
+        );
 
         if (res.ok) {
           const data = await res.json();
@@ -170,7 +217,7 @@ export default function ExamTerminalPage() {
               id: index + 1,
               qEn: d.question_en,
               options: d.options,
-              answer: d.correct_index
+              answer: d.correct_index,
             }));
             setQuestions(formatted);
             fetchedFromDb = true;
@@ -181,20 +228,74 @@ export default function ExamTerminalPage() {
       }
     }
 
+    // 3. Default Built-In English Question Bank
     if (!fetchedFromDb) {
       const bank = gradeQuestionBanks[cleanGrade] || gradeQuestionBanks["Grade 1"];
       setQuestions(bank);
     }
   };
 
+  const submitExamWithReason = useCallback(
+    (reason: string) => {
+      if (isExamCompleted || questions.length === 0) return;
+
+      let correctCount = 0;
+      const totalCount = questions.length;
+
+      questions.forEach((q, idx) => {
+        if (selectedAnswers[idx] === q.answer) {
+          correctCount++;
+        }
+      });
+
+      const percentage = Math.round((correctCount / totalCount) * 100);
+      const scoreStr = `${correctCount}/${totalCount}`;
+
+      setSubmissionReason(reason);
+      setFinalScore({
+        correct: correctCount,
+        total: totalCount,
+        percentage,
+      });
+      setIsExamCompleted(true);
+
+      try {
+        const stored = localStorage.getItem("mindmory_students");
+        if (stored && student?.rollNo) {
+          const parsed = JSON.parse(stored);
+          const updated = parsed.map((st: any) => {
+            if (st.rollNo?.toUpperCase() === student.rollNo.toUpperCase()) {
+              return {
+                ...st,
+                testStatus: "Completed",
+                testScore: scoreStr,
+                testPercentage: percentage,
+              };
+            }
+            return st;
+          });
+          localStorage.setItem("mindmory_students", JSON.stringify(updated));
+        }
+      } catch {}
+
+      try {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch {}
+    },
+    [isExamCompleted, questions, selectedAnswers, student]
+  );
+
+  // COUNTDOWN TIMER LOCK
   useEffect(() => {
-    if (isExamCompleted || timeLeft <= 0) return;
+    if (isExamCompleted || questions.length === 0) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleAutoSubmit();
+          submitExamWithReason("Time Expired (Auto-Submitted)");
           return 0;
         }
         return prev - 1;
@@ -202,7 +303,49 @@ export default function ExamTerminalPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, isExamCompleted]);
+  }, [isExamCompleted, questions.length, submitExamWithReason]);
+
+  // ANTI-CHEATING TAB-SWITCH & SHORTCUT LOCK
+  useEffect(() => {
+    if (isExamCompleted || questions.length === 0) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setTabViolations((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+            submitExamWithReason("Anti-Cheat Auto-Lock (3 Tab Switches Detected)");
+          } else {
+            setAntiCheatWarning(
+              `ANTI-CHEATING ALERT (${next}/3): Leaving the exam tab is strictly prohibited! On the 3rd violation, your exam will auto-submit.`
+            );
+          }
+          return next;
+        });
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "u", "p", "s"].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExamCompleted, questions.length, submitExamWithReason]);
+
+  const enterFullScreen = () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+  };
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -214,48 +357,8 @@ export default function ExamTerminalPage() {
     if (isExamCompleted) return;
     setSelectedAnswers({
       ...selectedAnswers,
-      [currentIdx]: optionIndex
+      [currentIdx]: optionIndex,
     });
-  };
-
-  const handleAutoSubmit = () => {
-    let correctCount = 0;
-    const totalCount = questions.length;
-
-    questions.forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.answer) {
-        correctCount++;
-      }
-    });
-
-    const percentage = Math.round((correctCount / totalCount) * 100);
-    const scoreStr = `${correctCount}/${totalCount}`;
-
-    setFinalScore({
-      correct: correctCount,
-      total: totalCount,
-      percentage
-    });
-    setIsExamCompleted(true);
-
-    try {
-      const stored = localStorage.getItem("mindmory_students");
-      if (stored && student?.rollNo) {
-        const parsed = JSON.parse(stored);
-        const updated = parsed.map((st: any) => {
-          if (st.rollNo?.toUpperCase() === student.rollNo.toUpperCase()) {
-            return {
-              ...st,
-              testStatus: "Completed",
-              testScore: scoreStr,
-              testPercentage: percentage
-            };
-          }
-          return st;
-        });
-        localStorage.setItem("mindmory_students", JSON.stringify(updated));
-      }
-    } catch {}
   };
 
   if (!student || questions.length === 0) {
@@ -270,10 +373,22 @@ export default function ExamTerminalPage() {
   const answeredCount = Object.keys(selectedAnswers).length;
 
   return (
-    <div className="min-h-screen bg-black text-neutral-100 font-sans selection:bg-red-600 selection:text-white pt-6 pb-20 px-4 sm:px-6 lg:px-8">
+    <div
+      onCopy={(e) => e.preventDefault()}
+      onPaste={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()}
+      className="min-h-screen bg-black text-neutral-100 font-sans selection:bg-red-600 selection:text-white pt-6 pb-20 px-4 sm:px-6 lg:px-8 select-none"
+    >
       <div className="max-w-4xl mx-auto space-y-6 text-left">
-        
-        {/* IDENTIFICATION HEADER */}
+        {/* ANTI-CHEATING VIOLATION ALERT */}
+        {antiCheatWarning && !isExamCompleted && (
+          <div className="bg-red-950 border-2 border-red-600 text-red-200 p-4 rounded-2xl text-xs font-bold flex items-center gap-3 animate-pulse">
+            <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
+            <span>{antiCheatWarning}</span>
+          </div>
+        )}
+
+        {/* IDENTIFICATION & TIMER HEADER */}
         <div className="bg-neutral-950 border border-neutral-850 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-950/80 border border-red-800 flex items-center justify-center text-red-500 font-bold shrink-0">
@@ -292,13 +407,34 @@ export default function ExamTerminalPage() {
             </div>
           </div>
 
-          <div className={`px-4 py-2 rounded-xl border flex items-center gap-2 shrink-0 ${
-            timeLeft < 180 ? "bg-red-950/80 border-red-700 text-red-400 animate-pulse" : "bg-neutral-900 border-neutral-800 text-neutral-200"
-          }`}>
-            <Clock className="w-4 h-4 text-red-500" />
-            <div>
-              <span className="text-[9px] uppercase font-mono block text-neutral-500 leading-none">Time Remaining</span>
-              <span className="text-base font-black font-mono leading-tight">{formatTimer(timeLeft)}</span>
+          <div className="flex items-center gap-2.5 self-end sm:self-auto">
+            {!isExamCompleted && (
+              <button
+                type="button"
+                onClick={enterFullScreen}
+                title="Enter Fullscreen Exam Lock"
+                className="p-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white cursor-pointer"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
+
+            <div
+              className={`px-4 py-2 rounded-xl border flex items-center gap-2 shrink-0 ${
+                timeLeft < 180
+                  ? "bg-red-950/80 border-red-700 text-red-400 animate-pulse"
+                  : "bg-neutral-900 border-neutral-800 text-neutral-200"
+              }`}
+            >
+              <Clock className="w-4 h-4 text-red-500" />
+              <div>
+                <span className="text-[9px] uppercase font-mono block text-neutral-500 leading-none">
+                  Time Remaining
+                </span>
+                <span className="text-base font-black font-mono leading-tight">
+                  {formatTimer(timeLeft)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -306,24 +442,29 @@ export default function ExamTerminalPage() {
         {/* ACTIVE EXAM CONTAINER */}
         {!isExamCompleted ? (
           <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-900 pb-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold text-red-400 bg-red-950 px-2.5 py-1 rounded-lg border border-red-900">
                   Question {currentIdx + 1} of {questions.length}
                 </span>
-                <span className="text-[11px] text-neutral-500">
+                <span className="text-[11px] text-neutral-400">
                   • {answeredCount} Answered
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-amber-400 bg-amber-950/80 border border-amber-800 px-2.5 py-0.5 rounded-full font-bold">
-                {targetGrade} Official Test
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-neutral-400 bg-neutral-900 border border-neutral-800 px-2.5 py-0.5 rounded-full">
+                  Anti-Cheat Lock: Active ({tabViolations}/3 Warnings)
+                </span>
+                <span className="text-[10px] font-mono text-amber-400 bg-amber-950/80 border border-amber-800 px-2.5 py-0.5 rounded-full font-bold">
+                  {targetGrade} English Exam
+                </span>
+              </div>
             </div>
 
             {/* QUESTION DISPLAY */}
             <div className="space-y-2 py-2">
               <h2 className="text-base sm:text-lg font-bold text-white leading-relaxed">
-                {currentQ.qEn}
+                {currentIdx + 1}. {currentQ.qEn}
               </h2>
             </div>
 
@@ -344,11 +485,13 @@ export default function ExamTerminalPage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`w-6 h-6 rounded-lg text-xs font-mono font-bold flex items-center justify-center border ${
-                        isSelected 
-                          ? "bg-red-600 border-red-500 text-white" 
-                          : "bg-neutral-950 border-neutral-850 text-neutral-400"
-                      }`}>
+                      <span
+                        className={`w-6 h-6 rounded-lg text-xs font-mono font-bold flex items-center justify-center border ${
+                          isSelected
+                            ? "bg-red-600 border-red-500 text-white"
+                            : "bg-neutral-950 border-neutral-850 text-neutral-400"
+                        }`}
+                      >
                         {String.fromCharCode(65 + optIdx)}
                       </span>
                       <span>{opt}</span>
@@ -360,8 +503,37 @@ export default function ExamTerminalPage() {
               })}
             </div>
 
+            {/* QUICK QUESTION NUMBER NAVIGATOR */}
+            <div className="pt-4 border-t border-neutral-900">
+              <span className="text-[10px] font-mono uppercase text-neutral-500 block mb-2">
+                Question Navigator:
+              </span>
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                {questions.map((_, idx) => {
+                  const answered = selectedAnswers[idx] !== undefined;
+                  const active = idx === currentIdx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCurrentIdx(idx)}
+                      className={`w-7 h-7 rounded-lg text-[11px] font-mono font-bold border transition cursor-pointer ${
+                        active
+                          ? "bg-red-600 border-red-500 text-white"
+                          : answered
+                          ? "bg-green-950/70 border-green-800 text-green-400"
+                          : "bg-black border-neutral-800 text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* PREVIOUS / NEXT / SUBMIT ACTIONS */}
-            <div className="pt-6 border-t border-neutral-900 flex items-center justify-between gap-3">
+            <div className="pt-4 border-t border-neutral-900 flex items-center justify-between gap-3">
               <button
                 type="button"
                 disabled={currentIdx === 0}
@@ -384,7 +556,7 @@ export default function ExamTerminalPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={handleAutoSubmit}
+                  onClick={() => submitExamWithReason("Submitted by Candidate")}
                   className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-lg shadow-green-600/30 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
@@ -402,11 +574,11 @@ export default function ExamTerminalPage() {
 
             <div className="space-y-1">
               <span className="text-[10px] font-mono text-green-400 font-bold uppercase tracking-widest block">
-                ASSESSMENT COMPLETE
+                {submissionReason}
               </span>
               <h2 className="text-2xl font-black text-white">{targetGrade} Exam Submitted</h2>
               <p className="text-xs text-neutral-400 max-w-md mx-auto mt-1">
-                Paper submitted for Roll Number <strong className="text-red-400">{student.rollNo}</strong> ({student.name}).
+                Paper recorded for Roll Number <strong className="text-red-400">{student.rollNo}</strong> ({student.name}).
               </p>
             </div>
 
@@ -414,11 +586,15 @@ export default function ExamTerminalPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto py-2">
                 <div className="bg-neutral-900 border border-neutral-850 p-4 rounded-2xl">
                   <span className="text-[10px] text-neutral-500 uppercase block font-mono">Score</span>
-                  <span className="text-xl font-black text-white font-mono">{finalScore.correct} / {finalScore.total}</span>
+                  <span className="text-xl font-black text-white font-mono">
+                    {finalScore.correct} / {finalScore.total}
+                  </span>
                 </div>
                 <div className="bg-neutral-900 border border-neutral-850 p-4 rounded-2xl">
                   <span className="text-[10px] text-neutral-500 uppercase block font-mono">Percentage</span>
-                  <span className="text-xl font-black text-green-400 font-mono">{finalScore.percentage}%</span>
+                  <span className="text-xl font-black text-green-400 font-mono">
+                    {finalScore.percentage}%
+                  </span>
                 </div>
                 <div className="bg-neutral-900 border border-neutral-850 p-4 rounded-2xl">
                   <span className="text-[10px] text-neutral-500 uppercase block font-mono">Status</span>
@@ -432,12 +608,11 @@ export default function ExamTerminalPage() {
                 href="/student-login"
                 className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition"
               >
-                Back to Desk
+                Back to Candidate Desk
               </Link>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

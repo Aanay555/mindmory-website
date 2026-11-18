@@ -3,7 +3,14 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, User, School, CheckCircle2, AlertCircle, Laptop, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  AlertCircle,
+  Laptop,
+  ShieldCheck,
+  Lock,
+} from "lucide-react";
 
 export default function StudentLoginPage() {
   const router = useRouter();
@@ -25,42 +32,53 @@ export default function StudentLoginPage() {
     if (!query) return;
 
     try {
-      // 1. Check primary roster
       let allStudents: any[] = [];
       const s1 = localStorage.getItem("mindmory_students");
       if (s1) {
-        try { allStudents = JSON.parse(s1); } catch {}
+        try {
+          allStudents = JSON.parse(s1);
+        } catch {}
       }
 
-      // 2. Check registered candidates
       const s2 = localStorage.getItem("mindmory_registered_students");
       if (s2) {
-        try { 
+        try {
           const custom = JSON.parse(s2);
           allStudents = [...allStudents, ...custom];
         } catch {}
       }
 
-      // Find candidate by Roll No
-      const found = allStudents.find((st: any) => 
-        st.rollNo?.toUpperCase() === query || 
-        st.rollNo?.replace(/\D/g, "") === query.replace(/\D/g, "")
+      const found = allStudents.find(
+        (st: any) =>
+          st.rollNo?.toUpperCase() === query ||
+          st.rollNo?.replace(/\D/g, "") === query.replace(/\D/g, "")
       );
 
       if (found) {
         setCandidate(found);
       } else {
-        setErrorMsg(`Roll Number "${query}" not found in current session database. Please check your slip.`);
+        setErrorMsg(
+          `Roll Number "${query}" not found in current session database. Please verify your institutional slip.`
+        );
       }
     } catch {
       setErrorMsg("Error accessing candidate registry.");
     }
   };
 
+  const isFeeApproved =
+    (candidate?.payment_status || "").toLowerCase() === "approved";
+
   const handleLaunchExam = () => {
     if (!candidate) return;
 
-    // SAVE COMPLETE CANDIDATE WITH PROPER GRADE
+    if (!isFeeApproved) {
+      setErrorMsg(
+        "Fee Verification Pending: Your school's deposit slip has not been approved by the MINDMORY Secretariat yet."
+      );
+      return;
+    }
+
     const candidateSession = {
       rollNo: candidate.rollNo,
       name: candidate.name,
@@ -68,18 +86,23 @@ export default function StudentLoginPage() {
       grade: candidate.grade || "Grade 1",
       category: candidate.category || "General Knowledge",
       school: candidate.school || "Registered School",
-      payment_status: candidate.payment_status || "Approved"
+      payment_status: candidate.payment_status || "Approved",
     };
 
-    localStorage.setItem("mindmory_current_student", JSON.stringify(candidateSession));
+    localStorage.setItem(
+      "mindmory_current_student",
+      JSON.stringify(candidateSession)
+    );
     router.push("/exam-terminal");
   };
 
   return (
     <div className="min-h-screen bg-black text-neutral-100 font-sans pt-10 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto space-y-8 text-left">
-        
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-red-500">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-red-500"
+        >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Home</span>
         </Link>
@@ -89,10 +112,10 @@ export default function StudentLoginPage() {
             OFFICIAL CANDIDATE TERMINAL
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-white mt-1">
-            Candidate Desk & Exam Launch
+            Candidate Desk &amp; Exam Launch
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
-            Enter your allotted Roll Number to verify your registration, view enrolled grade, and begin online assessment.
+            Enter your allotted Roll Number to verify your institutional enrollment, check fee approval status, and begin the online assessment.
           </p>
         </div>
 
@@ -142,47 +165,67 @@ export default function StudentLoginPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
-                <span className="text-neutral-500 block text-[10px] uppercase font-mono">Candidate Name</span>
+                <span className="text-neutral-500 block text-[10px] uppercase font-mono">
+                  Candidate &amp; Father Name
+                </span>
                 <span className="font-bold text-white text-sm">{candidate.name}</span>
-                <span className="text-neutral-400 block text-[11px]">{candidate.fatherName || "—"}</span>
+                <span className="text-neutral-400 block text-[11px]">
+                  Father: {candidate.fatherName || "—"}
+                </span>
               </div>
 
               <div>
-                <span className="text-neutral-500 block text-[10px] uppercase font-mono">Allocated Grade & Subject</span>
+                <span className="text-neutral-500 block text-[10px] uppercase font-mono">
+                  Allocated Grade &amp; Subject
+                </span>
                 <span className="font-bold text-amber-400 text-sm">{candidate.grade}</span>
                 <span className="text-neutral-400 block text-[11px]">{candidate.category}</span>
               </div>
 
               <div>
-                <span className="text-neutral-500 block text-[10px] uppercase font-mono">School / Institution</span>
+                <span className="text-neutral-500 block text-[10px] uppercase font-mono">
+                  School / Institution
+                </span>
                 <span className="text-neutral-300 font-medium">{candidate.school}</span>
               </div>
 
               <div>
-                <span className="text-neutral-500 block text-[10px] uppercase font-mono">Fee Clearance Status</span>
-                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                  (candidate.payment_status || "").toLowerCase() === "approved"
-                    ? "bg-green-950 text-green-400 border border-green-800"
-                    : "bg-amber-950 text-amber-400 border border-amber-800"
-                }`}>
-                  {candidate.payment_status || "Approved"}
+                <span className="text-neutral-500 block text-[10px] uppercase font-mono">
+                  Fee Clearance Status
+                </span>
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    isFeeApproved
+                      ? "bg-green-950 text-green-400 border border-green-800"
+                      : "bg-amber-950 text-amber-400 border border-amber-800"
+                  }`}
+                >
+                  {candidate.payment_status || "Pending"}
                 </span>
               </div>
             </div>
 
             <div className="pt-2 border-t border-neutral-900">
-              <button
-                type="button"
-                onClick={handleLaunchExam}
-                className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl text-xs sm:text-sm uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/40 cursor-pointer"
-              >
-                <Laptop className="w-4 h-4" />
-                <span>Launch {candidate.grade} Online Exam Terminal →</span>
-              </button>
+              {isFeeApproved ? (
+                <button
+                  type="button"
+                  onClick={handleLaunchExam}
+                  className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl text-xs sm:text-sm uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/40 cursor-pointer"
+                >
+                  <Laptop className="w-4 h-4" />
+                  <span>Launch {candidate.grade} Online Exam Terminal →</span>
+                </button>
+              ) : (
+                <div className="bg-amber-950/40 border border-amber-800/70 p-4 rounded-2xl text-xs text-amber-200 flex items-center gap-2.5">
+                  <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    Exam access is locked until your school&apos;s bank deposit slip is verified and approved by Admin.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
