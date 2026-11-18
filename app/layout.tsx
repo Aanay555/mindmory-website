@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  Home,
-  FileText,
-  Download,
   Laptop,
-  ArrowRight,
-  Trophy as TrophyIcon,
   MapPin,
   Lock,
 } from "lucide-react";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: {
@@ -128,114 +124,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-black text-neutral-100 min-h-screen flex flex-col justify-between font-sans selection:bg-red-600 selection:text-white">
-        {/* GLOBAL NAVBAR ON ALL PAGES */}
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-md border-b border-neutral-900 px-4 sm:px-6 lg:px-8 py-2.5">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-            <BrandLogo />
-
-            {/* DESKTOP MENU (INCLUDING HOME ON ALL PAGES) */}
-            <nav className="hidden xl:flex items-center gap-1 text-xs font-bold">
-              <Link
-                href="/"
-                className="px-3 py-1.5 rounded-lg text-neutral-200 hover:text-white hover:bg-neutral-900 transition flex items-center gap-1"
-              >
-                <Home className="w-3.5 h-3.5 text-red-500" />
-                <span>Home</span>
-              </Link>
-              <Link
-                href="/syllabus"
-                className="px-3 py-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-900 transition"
-              >
-                Syllabus
-              </Link>
-              <Link
-                href="/paper-pattern"
-                className="px-3 py-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-900 transition flex items-center gap-1"
-              >
-                <FileText className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Model Papers</span>
-              </Link>
-              <Link
-                href="/downloads"
-                className="px-3 py-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-900 transition flex items-center gap-1"
-              >
-                <Download className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Downloads</span>
-              </Link>
-              <Link
-                href="/gallery"
-                className="px-3 py-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-900 transition"
-              >
-                Gallery
-              </Link>
-              <Link
-                href="/about"
-                className="px-3 py-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-900 transition"
-              >
-                About Us
-              </Link>
-              <Link
-                href="/contact"
-                className="px-3 py-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-900 transition"
-              >
-                Contact
-              </Link>
-              <Link
-                href="/results"
-                className="px-3 py-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-neutral-900 transition flex items-center gap-1"
-              >
-                <TrophyIcon className="w-3.5 h-3.5 text-amber-500" />
-                <span>Results</span>
-              </Link>
-              <Link
-                href="/student-login"
-                className="px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-100 hover:text-white transition flex items-center gap-1.5 ml-1"
-              >
-                <Laptop className="w-3.5 h-3.5 text-red-500" />
-                <span>Candidate Desk</span>
-              </Link>
-              <Link
-                href="/register"
-                className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition flex items-center gap-1 shadow-md shadow-red-600/30 ml-1"
-              >
-                <span>Register</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </nav>
-
-            {/* MOBILE / TABLET ACTION BUTTONS */}
-            <div className="flex items-center gap-2 xl:hidden">
-              <Link
-                href="/student-login"
-                className="px-2.5 py-1.5 bg-neutral-900 border border-neutral-800 text-neutral-200 text-xs font-bold rounded-lg"
-              >
-                Desk
-              </Link>
-              <Link
-                href="/register"
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm"
-              >
-                Register
-              </Link>
-            </div>
-          </div>
-
-          {/* MOBILE / TABLET SCROLLABLE NAV STRIP */}
-          <nav className="xl:hidden flex items-center gap-3 overflow-x-auto pt-2.5 mt-2 border-t border-neutral-900 text-xs font-bold text-neutral-300 whitespace-nowrap">
-            <Link href="/" className="text-white hover:text-red-400">Home</Link>
-            <Link href="/syllabus" className="hover:text-red-400">Syllabus</Link>
-            <Link href="/paper-pattern" className="hover:text-red-400">Model Papers</Link>
-            <Link href="/downloads" className="hover:text-red-400">Downloads</Link>
-            <Link href="/gallery" className="hover:text-red-400">Gallery</Link>
-            <Link href="/results" className="text-amber-400">Results</Link>
-            <Link href="/about" className="hover:text-red-400">About</Link>
-            <Link href="/contact" className="hover:text-red-400">Contact</Link>
-          </nav>
-        </header>
+      <body className="bg-black text-neutral-100 min-h-screen flex flex-col justify-between font-sans overflow-x-hidden selection:bg-red-600 selection:text-white">
+        {/* RESPONSIVE MOBILE HAMBURGER + DESKTOP NAVBAR */}
+        <Navbar />
 
         {/* PAGE CONTENT */}
-        <div className="flex-grow">{children}</div>
+        <div className="flex-grow w-full overflow-x-hidden">{children}</div>
 
         {/* GLOBAL FOOTER ON ALL PAGES */}
         <footer className="border-t border-neutral-900 bg-neutral-950/90 pt-14 pb-10 text-neutral-400 text-xs">
@@ -338,7 +232,7 @@ export default function RootLayout({
               </div>
             </div>
 
-            {/* SHORT CLEAN COPYRIGHT WITH MINDMORY (NO SPACE, NO TYPO) */}
+            {/* SHORT CLEAN COPYRIGHT WITH MINDMORY */}
             <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-500">
               <div>
                 © 2026 <span className="font-bold text-white">MIND</span>
