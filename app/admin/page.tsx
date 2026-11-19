@@ -26,6 +26,8 @@ import {
   CheckCircle,
   Eye,
   Sparkles,
+  Trophy,
+  Download,
 } from "lucide-react";
 
 const baseStudentNames = [
@@ -135,7 +137,6 @@ const defaultDisciplines = [
   },
 ];
 
-// SMART BULK MCQ PARSER (Supports numbered questions, a/b/c/d options, and Ans/Answer/Correct keys)
 function parseBulkMCQs(rawText: string, defaultPart: string): ParsedMCQ[] {
   const lines = rawText
     .split(/\r?\n/)
@@ -212,12 +213,16 @@ export default function AdminPortalPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
-  const [activeTab, setActiveTab] = useState<"students" | "paper-uploader" | "syllabus" | "settings">("students");
+  const [activeTab, setActiveTab] = useState<
+    "students" | "results-sheet" | "paper-uploader" | "syllabus" | "settings"
+  >("students");
 
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterFeeStatus, setFilterFeeStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [resultFilterStatus, setResultFilterStatus] = useState<"completed" | "all">("completed");
+  const [resultSearch, setResultSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [viewingSlip, setViewingSlip] = useState<any | null>(null);
@@ -307,6 +312,8 @@ export default function AdminPortalPage() {
       let mainStored: any[] = [];
       let customRegistered: any[] = [];
       let apiStudents: any[] = [];
+      let apiResults: any[] = [];
+      let localResults: any[] = [];
 
       try {
         const res = await fetch("/api/admin/students", { cache: "no-store" });
@@ -314,6 +321,15 @@ export default function AdminPortalPage() {
           const data = await res.json();
           if (Array.isArray(data)) apiStudents = data;
           else if (Array.isArray(data?.students)) apiStudents = data.students;
+        }
+      } catch {}
+
+      try {
+        const resR = await fetch("/api/results", { cache: "no-store" });
+        if (resR.ok) {
+          const dataR = await resR.json();
+          if (Array.isArray(dataR)) apiResults = dataR;
+          else if (Array.isArray(dataR?.results)) apiResults = dataR.results;
         }
       } catch {}
 
@@ -328,6 +344,13 @@ export default function AdminPortalPage() {
       if (s2) {
         try {
           customRegistered = JSON.parse(s2);
+        } catch {}
+      }
+
+      const s3 = localStorage.getItem("mindmory_exam_results");
+      if (s3) {
+        try {
+          localResults = JSON.parse(s3);
         } catch {}
       }
 
@@ -347,6 +370,39 @@ export default function AdminPortalPage() {
                 rollNo: rNo,
                 fatherName: st.fatherName || st.father_name || current.fatherName || "",
                 payment_status: st.payment_status || current.payment_status || "Pending",
+              });
+            }
+          });
+        }
+      });
+
+      // Merge submitted exam results into master roster
+      [localResults, apiResults].forEach((resList) => {
+        if (Array.isArray(resList)) {
+          resList.forEach((r) => {
+            const rNo = r.rollNo || r.roll_no;
+            if (rNo) {
+              const key = String(rNo).toUpperCase();
+              const current = studentsMap.get(key) || {
+                rollNo: rNo,
+                name: r.name || "Candidate",
+                fatherName: r.fatherName || "",
+                grade: r.grade || "Grade 1",
+                category: r.category || "General Knowledge",
+                school: r.school || "Registered School",
+                payment_status: "Approved",
+              };
+              const scoreDisplay =
+                r.scoreText ||
+                (r.score !== undefined && r.total !== undefined
+                  ? `${r.score}/${r.total}`
+                  : current.testScore);
+              studentsMap.set(key, {
+                ...current,
+                testStatus: "Completed",
+                testScore: scoreDisplay,
+                testPercentage: r.percentage ?? current.testPercentage,
+                submittedAt: r.submittedAt || current.submittedAt,
               });
             }
           });
@@ -430,6 +486,47 @@ export default function AdminPortalPage() {
     try {
       localStorage.setItem("mindmory_students", JSON.stringify(updated));
     } catch {}
+  };
+
+  const handleExportMasterResultsCSV = (records: any[]) => {
+    const headers = [
+      "Roll Number",
+      "Candidate Name",
+      "Father Name",
+      "Grade",
+      "Discipline",
+      "School",
+      "Score",
+      "Percentage",
+      "Status",
+    ];
+    const rows = records.map((r) => {
+      let pct = r.testPercentage;
+      if (pct === undefined && typeof r.testScore === "string" && r.testScore.includes("/")) {
+        const [c, t] = r.testScore.split("/").map(Number);
+        if (t > 0) pct = Math.round((c / t) * 100);
+      }
+      return [
+        `"${r.rollNo || ""}"`,
+        `"${r.name || ""}"`,
+        `"${r.fatherName || ""}"`,
+        `"${r.grade || ""}"`,
+        `"${r.category || ""}"`,
+        `"${r.school || ""}"`,
+        `"${r.testScore || "Pending"}"`,
+        `"${pct !== undefined ? pct + "%" : "-"}"`,
+        `"${r.testScore ? "Completed" : "Pending"}"`,
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `MINDMORY_Master_Results_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // BULK MCQ UPLOAD HANDLERS
@@ -627,6 +724,20 @@ Ans: b`;
   const pendingCount = students.filter(
     (s) => s.payment_status?.toLowerCase() === "pending"
   ).length;
+  const completedExamsCount = students.filter((s) => Boolean(s.testScore)).length;
+
+  const masterResultRecords = students.filter((s) => {
+    const matchesStatus =
+      resultFilterStatus === "all" ? true : Boolean(s.testScore);
+    const rq = resultSearch.trim().toLowerCase();
+    const matchesSearch =
+      !rq ||
+      s.name?.toLowerCase().includes(rq) ||
+      s.rollNo?.toLowerCase().includes(rq) ||
+      s.school?.toLowerCase().includes(rq) ||
+      s.grade?.toLowerCase().includes(rq);
+    return matchesStatus && matchesSearch;
+  });
 
   if (!isUnlocked) {
     return (
@@ -638,7 +749,7 @@ Ans: b`;
             </div>
             <h1 className="text-xl font-black tracking-tight">Admin Portal Locked</h1>
             <p className="text-xs text-neutral-400">
-              Enter Secretariat Security PIN to access candidate records, bulk MCQ uploader, and settings.
+              Enter Secretariat Security PIN to access candidate records, master results, bulk MCQ uploader, and settings.
             </p>
           </div>
           <form
@@ -694,7 +805,7 @@ Ans: b`;
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Public Website</span>
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2 flex-wrap">
               <span>MINDMORY Secretariat Admin Dashboard</span>
               <span className="text-[10px] font-mono font-bold uppercase bg-red-950 border border-red-800 text-red-400 px-2.5 py-0.5 rounded-full">
                 Active Controller
@@ -714,7 +825,7 @@ Ans: b`;
         </div>
 
         {/* METRICS ROW */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-neutral-950 border border-neutral-850 p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
               <span className="text-[10px] font-mono text-neutral-500 uppercase block">Total Roster</span>
@@ -738,6 +849,18 @@ Ans: b`;
             </div>
             <Coins className="w-7 h-7 text-amber-500" />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("results-sheet")}
+            className="bg-neutral-950 border border-neutral-850 hover:border-amber-500 p-5 rounded-2xl flex items-center justify-between shadow-lg text-left transition cursor-pointer"
+          >
+            <div>
+              <span className="text-[10px] font-mono text-amber-400 uppercase block">Exams Attempted</span>
+              <span className="text-2xl font-black text-white">{completedExamsCount} Results</span>
+            </div>
+            <Trophy className="w-7 h-7 text-amber-400" />
+          </button>
         </div>
 
         {/* TABS */}
@@ -752,6 +875,18 @@ Ans: b`;
           >
             <Users className="w-4 h-4" />
             <span>Candidates Roster &amp; Slip Verification</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("results-sheet")}
+            className={`pb-3 transition flex items-center gap-2 cursor-pointer ${
+              activeTab === "results-sheet"
+                ? "text-amber-400 border-b-2 border-amber-500"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <span>Master Results &amp; Backup Sheet ({completedExamsCount})</span>
           </button>
 
           <button
@@ -986,7 +1121,145 @@ Ans: b`;
           </div>
         )}
 
-        {/* TAB 2: BULK REAL-PAPER & 100-MCQ UPLOADER */}
+        {/* TAB 2: MASTER RESULTS & BACKUP SHEET (ALL ATTEMPTED STUDENTS IN ONE PLACE) */}
+        {activeTab === "results-sheet" && (
+          <div className="space-y-4 text-left">
+            <div className="bg-neutral-950 border border-neutral-850 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-mono text-amber-400 uppercase font-bold tracking-widest block">
+                  CENTRAL EXAMINATION BACKUP
+                </span>
+                <h2 className="text-lg font-black text-white mt-0.5">
+                  Master Candidate Results Sheet ({masterResultRecords.length} Records)
+                </h2>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Every candidate who completes the online exam is automatically logged here with score, percentage, and school details.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="relative flex-1 md:w-60">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-neutral-500" />
+                  <input
+                    type="text"
+                    placeholder="Filter by name, roll, school..."
+                    value={resultSearch}
+                    onChange={(e) => setResultSearch(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <select
+                  value={resultFilterStatus}
+                  onChange={(e) => setResultFilterStatus(e.target.value as "completed" | "all")}
+                  className="bg-black border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white font-bold"
+                >
+                  <option value="completed">Completed Only ({completedExamsCount})</option>
+                  <option value="all">All Enrolled ({students.length})</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportMasterResultsCSV(masterResultRecords)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-green-600/20"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV / Excel</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-neutral-950 border border-neutral-850 rounded-2xl overflow-hidden shadow-2xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-900/80 text-neutral-400 uppercase font-mono text-[10px] border-b border-neutral-850">
+                    <tr>
+                      <th className="py-3 px-4">#</th>
+                      <th className="py-3 px-4">Roll No</th>
+                      <th className="py-3 px-4">Student Name</th>
+                      <th className="py-3 px-4">School / Institute</th>
+                      <th className="py-3 px-4">Grade</th>
+                      <th className="py-3 px-4 text-center">Score</th>
+                      <th className="py-3 px-4 text-center">Percentage</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-900 text-neutral-300">
+                    {masterResultRecords.length > 0 ? (
+                      masterResultRecords.map((r, idx) => {
+                        let pct = r.testPercentage;
+                        if (
+                          pct === undefined &&
+                          typeof r.testScore === "string" &&
+                          r.testScore.includes("/")
+                        ) {
+                          const [c, t] = r.testScore.split("/").map(Number);
+                          if (t > 0) pct = Math.round((c / t) * 100);
+                        }
+
+                        return (
+                          <tr key={r.rollNo + "_" + idx} className="hover:bg-neutral-900/40 transition">
+                            <td className="py-3 px-4 font-mono text-neutral-500">{idx + 1}</td>
+                            <td className="py-3 px-4 font-mono font-bold text-red-400 whitespace-nowrap">
+                              {r.rollNo}
+                            </td>
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <span className="font-bold text-white block">{r.name}</span>
+                              <span className="text-[10px] text-neutral-500">{r.category}</span>
+                            </td>
+                            <td className="py-3 px-4 text-neutral-300 truncate max-w-xs">{r.school}</td>
+                            <td className="py-3 px-4 text-amber-400 font-semibold whitespace-nowrap">
+                              {r.grade}
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono font-black text-white whitespace-nowrap">
+                              {r.testScore || "—"}
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono font-bold whitespace-nowrap">
+                              {pct !== undefined ? (
+                                <span
+                                  className={`px-2 py-0.5 rounded border ${
+                                    pct >= 70
+                                      ? "bg-green-950/70 border-green-800 text-green-400"
+                                      : pct >= 40
+                                      ? "bg-amber-950/70 border-amber-800 text-amber-400"
+                                      : "bg-red-950/70 border-red-800 text-red-400"
+                                  }`}
+                                >
+                                  {pct}%
+                                </span>
+                              ) : (
+                                <span className="text-neutral-600">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center whitespace-nowrap">
+                              {r.testScore ? (
+                                <span className="px-2.5 py-0.5 rounded-full bg-green-950 border border-green-800 text-green-400 text-[10px] font-bold uppercase">
+                                  Completed
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-500 text-[10px] font-bold uppercase">
+                                  Pending
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="text-center py-10 text-neutral-500">
+                          No completed exam records match your filter.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: BULK REAL-PAPER & 100-MCQ UPLOADER */}
         {activeTab === "paper-uploader" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
             <div className="lg:col-span-8 bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
@@ -1184,7 +1457,7 @@ Ans: b`;
           </div>
         )}
 
-        {/* TAB 3: SYLLABUS & CATEGORY MANAGER */}
+        {/* TAB 4: SYLLABUS & CATEGORY MANAGER */}
         {activeTab === "syllabus" && (
           <div className="space-y-6 text-left">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1251,7 +1524,7 @@ Ans: b`;
           </div>
         )}
 
-        {/* TAB 4: PORTAL SETTINGS & PIN */}
+        {/* TAB 5: PORTAL SETTINGS & PIN */}
         {activeTab === "settings" && (
           <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 max-w-2xl space-y-6 text-left shadow-2xl">
             <h2 className="text-xl font-black text-white">Contest Parameters &amp; Security</h2>
@@ -1565,11 +1838,12 @@ Ans: b`;
           </div>
         </div>
       )}
-      <GalleryPhotoManager />
-      <StudentProgressViewer /> 
-      <DownloadsManager />
+
+      <div className="max-w-7xl mx-auto mt-10 space-y-10">
+        <GalleryPhotoManager />
+        <StudentProgressViewer />
+        <DownloadsManager />
+      </div>
     </div>
   );
 }
-
-
