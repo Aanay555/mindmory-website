@@ -242,14 +242,23 @@ export default function ExamTerminalPage() {
       let correctCount = 0;
       const totalCount = questions.length;
 
-      questions.forEach((q, idx) => {
-        if (selectedAnswers[idx] === q.answer) {
-          correctCount++;
-        }
+      const questionBreakdown = questions.map((q, idx) => {
+        const chosenIdx = selectedAnswers[idx];
+        const isCorrect = chosenIdx === q.answer;
+        if (isCorrect) correctCount++;
+        return {
+          qNo: idx + 1,
+          question: q.qEn,
+          selectedOption:
+            chosenIdx !== undefined ? q.options[chosenIdx] : "Not Answered",
+          correctOption: q.options[q.answer],
+          isCorrect,
+        };
       });
 
       const percentage = Math.round((correctCount / totalCount) * 100);
       const scoreStr = `${correctCount}/${totalCount}`;
+      const submittedAt = new Date().toISOString();
 
       setSubmissionReason(reason);
       setFinalScore({
@@ -259,23 +268,65 @@ export default function ExamTerminalPage() {
       });
       setIsExamCompleted(true);
 
+      const resultRecord = {
+        rollNo: student?.rollNo || "MM-2026-UNKNOWN",
+        name: student?.name || "Candidate",
+        fatherName: student?.fatherName || "",
+        school: student?.school || "Registered School",
+        grade: targetGrade,
+        category: student?.category || "General Knowledge",
+        score: correctCount,
+        total: totalCount,
+        scoreText: scoreStr,
+        percentage,
+        status: "Completed",
+        submissionReason: reason,
+        submittedAt,
+        breakdown: questionBreakdown,
+      };
+
+      // 1. Save to Backend Server (/api/results) so Admin sees all 25+ students in one place
+      fetch("/api/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resultRecord),
+      }).catch(() => {});
+
+      // 2. Sync across localStorage registries (mindmory_exam_results, mindmory_students, mindmory_registered_students)
       try {
-        const stored = localStorage.getItem("mindmory_students");
-        if (stored && student?.rollNo) {
-          const parsed = JSON.parse(stored);
-          const updated = parsed.map((st: any) => {
-            if (st.rollNo?.toUpperCase() === student.rollNo.toUpperCase()) {
-              return {
-                ...st,
-                testStatus: "Completed",
-                testScore: scoreStr,
-                testPercentage: percentage,
-              };
+        const existingResultsRaw = localStorage.getItem("mindmory_exam_results");
+        const existingResults = existingResultsRaw ? JSON.parse(existingResultsRaw) : [];
+        const filteredResults = Array.isArray(existingResults)
+          ? existingResults.filter(
+              (r: any) => r.rollNo?.toUpperCase() !== resultRecord.rollNo.toUpperCase()
+            )
+          : [];
+        localStorage.setItem(
+          "mindmory_exam_results",
+          JSON.stringify([resultRecord, ...filteredResults])
+        );
+
+        ["mindmory_students", "mindmory_registered_students"].forEach((storageKey) => {
+          const stored = localStorage.getItem(storageKey);
+          if (stored && student?.rollNo) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              const updated = parsed.map((st: any) => {
+                if (st.rollNo?.toUpperCase() === student.rollNo.toUpperCase()) {
+                  return {
+                    ...st,
+                    testStatus: "Completed",
+                    testScore: scoreStr,
+                    testPercentage: percentage,
+                    submittedAt,
+                  };
+                }
+                return st;
+              });
+              localStorage.setItem(storageKey, JSON.stringify(updated));
             }
-            return st;
-          });
-          localStorage.setItem("mindmory_students", JSON.stringify(updated));
-        }
+          }
+        });
       } catch {}
 
       try {
@@ -284,7 +335,7 @@ export default function ExamTerminalPage() {
         }
       } catch {}
     },
-    [isExamCompleted, questions, selectedAnswers, student]
+    [isExamCompleted, questions, selectedAnswers, student, targetGrade]
   );
 
   // COUNTDOWN TIMER LOCK
@@ -448,7 +499,7 @@ export default function ExamTerminalPage() {
                   Question {currentIdx + 1} of {questions.length}
                 </span>
                 <span className="text-[11px] text-neutral-400">
-                  • {answeredCount} Answered
+                  - {answeredCount} Answered
                 </span>
               </div>
               <div className="flex items-center gap-2">
