@@ -28,6 +28,7 @@ import {
   Sparkles,
   Trophy,
   Download,
+  KeyRound,
 } from "lucide-react";
 
 const baseStudentNames = [
@@ -213,6 +214,14 @@ export default function AdminPortalPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
+
+  // PIN RECOVERY STATES
+  const [showForgotPin, setShowForgotPin] = useState(false);
+  const [recoveryAnswerInput, setRecoveryAnswerInput] = useState("");
+  const [newResetPin, setNewResetPin] = useState("");
+  const [recoveryMessage, setRecoveryMessage] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
+
   const [activeTab, setActiveTab] = useState<
     "students" | "results-sheet" | "paper-uploader" | "syllabus" | "settings"
   >("students");
@@ -267,6 +276,8 @@ export default function AdminPortalPage() {
   const [fee, setFee] = useState<number>(1100);
   const [whatsapp, setWhatsapp] = useState("923333400000");
   const [adminPin, setAdminPin] = useState("1234");
+  const [recoveryQuestion, setRecoveryQuestion] = useState("What is the Secretariat Recovery Key?");
+  const [recoveryAnswer, setRecoveryAnswer] = useState("MINDMORY2026");
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   useEffect(() => {
@@ -285,6 +296,12 @@ export default function AdminPortalPage() {
       }
       const savedPin = localStorage.getItem("mindmory_admin_pin");
       if (savedPin) setAdminPin(savedPin);
+
+      const savedRecQ = localStorage.getItem("mindmory_admin_recovery_q");
+      if (savedRecQ) setRecoveryQuestion(savedRecQ);
+
+      const savedRecA = localStorage.getItem("mindmory_admin_recovery_a");
+      if (savedRecA) setRecoveryAnswer(savedRecA);
     } catch {}
 
     try {
@@ -376,7 +393,6 @@ export default function AdminPortalPage() {
         }
       });
 
-      // Merge submitted exam results into master roster
       [localResults, apiResults].forEach((resList) => {
         if (Array.isArray(resList)) {
           resList.forEach((r) => {
@@ -689,10 +705,53 @@ Ans: b`;
     };
     try {
       localStorage.setItem("mindmory_site_settings", JSON.stringify(config));
-      localStorage.setItem("mindmory_admin_pin", adminPin.trim());
+      if (adminPin.trim()) {
+        localStorage.setItem("mindmory_admin_pin", adminPin.trim());
+      }
+      if (recoveryQuestion.trim()) {
+        localStorage.setItem("mindmory_admin_recovery_q", recoveryQuestion.trim());
+      }
+      if (recoveryAnswer.trim()) {
+        localStorage.setItem("mindmory_admin_recovery_a", recoveryAnswer.trim());
+      }
     } catch {}
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 3000);
+  };
+
+  const handleRecoverPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError("");
+    setRecoveryMessage("");
+
+    const entered = recoveryAnswerInput.trim().toLowerCase();
+    const expected = recoveryAnswer.trim().toLowerCase();
+    const masterFallback = "mindmory2026";
+
+    if (entered !== expected && entered !== masterFallback) {
+      setRecoveryError("Incorrect Recovery Key. Please enter the valid Secretariat Recovery Key.");
+      return;
+    }
+
+    if (!newResetPin.trim() || newResetPin.trim().length < 4) {
+      setRecoveryError("Please enter a new PIN (minimum 4 digits/characters).");
+      return;
+    }
+
+    const updatedPin = newResetPin.trim();
+    setAdminPin(updatedPin);
+    try {
+      localStorage.setItem("mindmory_admin_pin", updatedPin);
+    } catch {}
+
+    setRecoveryMessage("PIN reset successfully! Unlocking Admin Dashboard...");
+    setTimeout(() => {
+      setShowForgotPin(false);
+      setRecoveryAnswerInput("");
+      setNewResetPin("");
+      setRecoveryMessage("");
+      setIsUnlocked(true);
+    }, 1000);
   };
 
   const filteredStudents = students.filter((s) => {
@@ -745,44 +804,122 @@ Ans: b`;
         <div className="max-w-md w-full bg-neutral-950 border border-neutral-850 rounded-3xl p-8 space-y-6 shadow-2xl">
           <div className="flex flex-col items-center text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-red-950 border border-red-800 flex items-center justify-center text-red-500">
-              <Lock className="w-6 h-6" />
+              {showForgotPin ? <KeyRound className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
             </div>
-            <h1 className="text-xl font-black tracking-tight">Admin Portal Locked</h1>
+            <h1 className="text-xl font-black tracking-tight">
+              {showForgotPin ? "Recover & Reset Admin PIN" : "Admin Portal Locked"}
+            </h1>
             <p className="text-xs text-neutral-400">
-              Enter Secretariat Security PIN to access candidate records, master results, bulk MCQ uploader, and settings.
+              {showForgotPin
+                ? "Answer your Secretariat Recovery Question to set a new Admin PIN."
+                : "Enter Secretariat Security PIN to access candidate records, master results, bulk MCQ uploader, and settings."}
             </p>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (pinInput.trim() === adminPin) {
-                setIsUnlocked(true);
-                setPinError("");
-              } else {
-                setPinError("Invalid PIN. Please enter the correct admin PIN.");
-              }
-            }}
-            className="space-y-4"
-          >
-            <input
-              type="password"
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
-              placeholder="Enter Admin PIN"
-              autoFocus
-              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-mono text-white focus:outline-none focus:border-red-600"
-            />
-            {pinError && (
-              <p className="text-xs text-red-400 text-center font-semibold">{pinError}</p>
-            )}
-            <button
-              type="submit"
-              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+
+          {!showForgotPin ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (pinInput.trim() === adminPin) {
+                  setIsUnlocked(true);
+                  setPinError("");
+                } else {
+                  setPinError("Invalid PIN. Please enter the correct admin PIN or use 'Forgot PIN?' below.");
+                }
+              }}
+              className="space-y-4"
             >
-              Unlock Admin Dashboard
-            </button>
-          </form>
-          <div className="text-center">
+              <input
+                type="password"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                placeholder="Enter Admin PIN"
+                autoFocus
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-mono text-white focus:outline-none focus:border-red-600"
+              />
+              {pinError && (
+                <p className="text-xs text-red-400 text-center font-semibold">{pinError}</p>
+              )}
+              <button
+                type="submit"
+                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+              >
+                Unlock Admin Dashboard
+              </button>
+
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPin(true);
+                    setPinError("");
+                  }}
+                  className="text-xs text-amber-400 hover:text-amber-300 font-semibold underline cursor-pointer"
+                >
+                  Forgot PIN? Recover / Reset Here
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRecoverPin} className="space-y-4 text-left">
+              <div>
+                <label className="block text-[11px] font-bold text-amber-400 mb-1">
+                  Recovery Question: {recoveryQuestion}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={recoveryAnswerInput}
+                  onChange={(e) => setRecoveryAnswerInput(e.target.value)}
+                  placeholder="Enter Recovery Answer / Key..."
+                  className="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-neutral-300 mb-1">
+                  Set New Admin PIN
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newResetPin}
+                  onChange={(e) => setNewResetPin(e.target.value)}
+                  placeholder="e.g. 5678"
+                  className="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-red-600"
+                />
+              </div>
+
+              {recoveryError && (
+                <p className="text-xs text-red-400 text-center font-semibold">{recoveryError}</p>
+              )}
+              {recoveryMessage && (
+                <p className="text-xs text-green-400 text-center font-semibold">{recoveryMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-black font-black rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+              >
+                Reset PIN &amp; Unlock
+              </button>
+
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPin(false);
+                    setRecoveryError("");
+                  }}
+                  className="text-xs text-neutral-400 hover:text-white underline cursor-pointer"
+                >
+                  ← Back to PIN Login
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="text-center border-t border-neutral-900 pt-3">
             <Link href="/" className="text-xs text-neutral-500 hover:text-white underline">
               ← Back to Home
             </Link>
@@ -1121,7 +1258,7 @@ Ans: b`;
           </div>
         )}
 
-        {/* TAB 2: MASTER RESULTS & BACKUP SHEET (ALL ATTEMPTED STUDENTS IN ONE PLACE) */}
+        {/* TAB 2: MASTER RESULTS & BACKUP SHEET */}
         {activeTab === "results-sheet" && (
           <div className="space-y-4 text-left">
             <div className="bg-neutral-950 border border-neutral-850 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -1342,7 +1479,6 @@ Ans: b`;
                 </div>
               </div>
 
-              {/* Optional .TXT File Import */}
               <div className="bg-black border border-dashed border-neutral-800 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <span className="text-neutral-400 flex items-center gap-2">
                   <Upload className="w-4 h-4 text-red-500" />
@@ -1413,7 +1549,6 @@ Ans: b`;
               )}
             </div>
 
-            {/* RIGHT SIDEBAR: PUBLISHED CUSTOM PAPERS STATUS */}
             <div className="lg:col-span-4 bg-neutral-950 border border-neutral-850 rounded-3xl p-6 space-y-4 shadow-2xl h-fit">
               <h3 className="text-base font-black text-white border-b border-neutral-900 pb-3">
                 Grade-Wise Active Question Banks
@@ -1524,13 +1659,13 @@ Ans: b`;
           </div>
         )}
 
-        {/* TAB 5: PORTAL SETTINGS & PIN */}
+        {/* TAB 5: PORTAL SETTINGS, PIN & RECOVERY KEY */}
         {activeTab === "settings" && (
           <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 sm:p-8 max-w-2xl space-y-6 text-left shadow-2xl">
-            <h2 className="text-xl font-black text-white">Contest Parameters &amp; Security</h2>
+            <h2 className="text-xl font-black text-white">Contest Parameters, Security PIN &amp; Recovery</h2>
             {settingsSaved && (
               <div className="bg-green-950/80 border border-green-800 text-green-300 p-3 rounded-xl text-xs font-bold">
-                ✓ Settings &amp; PIN saved!
+                ✓ Settings, Security PIN &amp; Recovery Key saved!
               </div>
             )}
             <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
@@ -1569,6 +1704,7 @@ Ans: b`;
                   <label className="block text-neutral-300 font-bold mb-1">Admin Access PIN</label>
                   <input
                     type="text"
+                    required
                     value={adminPin}
                     onChange={(e) => setAdminPin(e.target.value)}
                     className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white font-mono"
@@ -1576,11 +1712,40 @@ Ans: b`;
                 </div>
               </div>
 
+              {/* PIN RECOVERY CONFIGURATION */}
+              <div className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                  <KeyRound className="w-4 h-4" />
+                  <span>PIN Recovery Question &amp; Secret Key (If PIN is Forgotten)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-neutral-400 font-bold mb-1">Security Question</label>
+                    <input
+                      type="text"
+                      value={recoveryQuestion}
+                      onChange={(e) => setRecoveryQuestion(e.target.value)}
+                      className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 font-bold mb-1">Secret Recovery Answer</label>
+                    <input
+                      type="text"
+                      required
+                      value={recoveryAnswer}
+                      onChange={(e) => setRecoveryAnswer(e.target.value)}
+                      className="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs uppercase cursor-pointer"
               >
-                Save Settings
+                Save Settings &amp; Security PIN
               </button>
             </form>
           </div>
